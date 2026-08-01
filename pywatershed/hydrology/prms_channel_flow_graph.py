@@ -383,8 +383,8 @@ def _calculate_subtimestep_numpy(
     )
 
 
-numba_msg = "prms_channel_flow_graph jit compiling with numba"
-print(numba_msg, flush=True)
+# numba_msg = "prms_channel_flow_graph jit compiling with numba"
+# print(numba_msg, flush=True)
 
 _calculate_subtimestep_numba = nb.njit(
     nb.types.UniTuple(nb.float64, 5)(
