@@ -2,6 +2,8 @@ import pathlib as pl
 from typing import Literal, Union
 from warnings import warn
 
+import numpy as np
+
 from ..base import meta
 from ..base.adapter import Adapter
 from ..base.budget import Budget
@@ -121,7 +123,8 @@ class ConservativeProcess(Process):
             restart_write_freq=restart_write_freq,
         )
 
-        self.name = "ConservativeProcess"
+        if not hasattr(self, "name"):
+            self.name = "ConservativeProcess"
 
         # Initialize budget attributes
         self._mass_budget = None
@@ -257,6 +260,7 @@ class ConservativeProcess(Process):
         basis: str = None,
         quantity: Literal["mass", "energy"] = "mass",
         ignore_nans: bool = False,
+        active_mask: Union[bool, np.ndarray] = False,
         unit_desc: str = "",
     ):
         """Set up budget(s) for this process.
@@ -265,6 +269,9 @@ class ConservativeProcess(Process):
             basis: "unit" or "global"
             quantity: Quantity to budget: "mass" or "energy"
             ignore_nans: Ignore NaN values in budget calculations
+            active_mask: False or a boolean np.ndarray masking active
+                locations (e.g. active HRUs); inactive locations are
+                excluded from balance checks.
             unit_desc: Description of units for budget output
         """
         if basis is None:
@@ -296,6 +303,7 @@ class ConservativeProcess(Process):
                     imbalance_fatal=(self._imbalance_behavior == "error"),
                     basis=basis,
                     ignore_nans=ignore_nans,
+                    active_mask=active_mask,
                     units=units,
                     unit_desc=unit_desc,
                     quantity="mass",

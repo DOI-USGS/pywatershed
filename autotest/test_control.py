@@ -31,6 +31,7 @@ def params_simple():
             "epan_coef": np.array(nhru * [1.0]),
             "potet_sublim": np.array(nhru * [1.0]),
             "cov_type": np.array(nhru * [1]),
+            "hru_type": np.array(nhru * [1]),
         },
     }
     prms_params["metadata"] = {}

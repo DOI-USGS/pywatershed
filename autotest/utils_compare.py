@@ -1,10 +1,30 @@
 import pathlib as pl
+from types import MappingProxyType
 from typing import Union
 
 import numpy as np
 import xarray as xr
 
 import pywatershed as pws
+
+
+def assert_dicts_equal(dic1, dic2):
+    assert set(dic1.keys()) == set(dic2.keys())
+
+    # add cases as needed
+    for kk, vv in dic1.items():
+        if isinstance(vv, (dict, MappingProxyType)):
+            assert_dicts_equal(dic1[kk], dic2[kk])
+        elif isinstance(vv, np.ndarray):
+            np.testing.assert_equal(dic1[kk], dic2[kk])
+        else:
+            if (
+                isinstance(vv, float)
+                and np.isnan(dic1[kk])
+                and np.isnan(dic2[kk])
+            ):
+                continue
+            assert dic1[kk] == dic2[kk]
 
 
 def assert_allclose(
@@ -138,6 +158,13 @@ def compare_in_memory(
         if mask_dict is not None:
             actual = actual[mask_dict[var]]
             desired = np.array(desired)[mask_dict[var]]
+        elif hasattr(process, "_active_hru_mask") and (
+            np.shape(actual) == np.shape(process._active_hru_mask)
+        ):
+            # compare only at active HRUs; inactive HRUs are masked to
+            # nan by pywatershed but generally not by PRMS output.
+            actual = actual[process._active_hru_mask]
+            desired = np.array(desired)[process._active_hru_mask]
 
         # Get variable-specific tolerances if provided
         var_rtol = rtol
@@ -199,6 +226,47 @@ def compare_in_memory(
             f"    FAILED for variables: {sorted(fail_list)}"
         )
         assert False, msg
+
+
+def compare_model_in_memory(
+    model: pws.base.Model,
+    answers: dict,
+    rtol: dict,
+    atol: dict,
+    equal_nan: bool = True,
+    strict: bool = False,
+    also_check_w_np: bool = True,
+    skip_missing_ans: bool = False,
+    fail_after_all_vars: bool = True,
+    verbose: bool = False,
+) -> None:
+    """Compare model values to answer dictionaries.
+
+    Parameters:
+        model: a pws.Model object.
+        answers: A dictionary where each process name contains a dictionary of
+          variable names with answers.
+        atol: A dictionary of tolerances to use for each process.
+        rtol: As for atol.
+    """
+
+    for process_name in model.processes.keys():
+        if process_name not in answers.keys():
+            continue
+
+        # <
+        _ = compare_in_memory(
+            process=model.processes[process_name],
+            answers=answers[process_name],
+            atol=atol[process_name],
+            rtol=rtol[process_name],
+            equal_nan=equal_nan,
+            strict=strict,
+            also_check_w_np=also_check_w_np,
+            skip_missing_ans=skip_missing_ans,
+            fail_after_all_vars=fail_after_all_vars,
+            verbose=verbose,
+        )
 
 
 def compare_netcdfs(

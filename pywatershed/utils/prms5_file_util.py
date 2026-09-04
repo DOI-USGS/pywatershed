@@ -19,22 +19,54 @@ def rename_dims(dim_name):
 
 
 def expand_scalar_to_dims(param_dict, param_dim_dict):
-    from pywatershed.utils.separate_nhm_params import params_expand_scalar
+    from pywatershed.utils.separate_nhm_params import (
+        expand_hru_to_monthly,
+        params_expand_scalar,
+    )
 
     # sometimes a scalar is allowed to represent a uniform values for
     # the full dimensions of a parameter. Going to handle those on a
     # case-by-case basis for now: just expand them to full size
+    # now also handling "monthly scalars", expanding these to hrus monthly
     for param_name in param_dict.keys():
         if param_name in params_expand_scalar:
             param_shape = param_dict[param_name].shape
-            if param_shape != (1,):
-                continue
             dims = meta.find_variables(param_name)[param_name]["dims"]
             full_param_shape = tuple([param_dict[dd] for dd in dims])
-            param_val = param_dict[param_name]
-            param_vals = np.zeros(full_param_shape) + param_val
+            param_vals = param_dict[param_name]
+            # dimension names declared for this parameter in the file
+            file_dims = param_dim_dict[param_name]
             param_dim_dict[param_name] = dims
-            param_dict[param_name] = param_vals
+            if param_shape == full_param_shape:
+                continue
+            elif param_shape == (1,):
+                param_dict[param_name] = (
+                    np.zeros(full_param_shape, dtype=param_vals.dtype)
+                    + param_vals
+                )
+            elif file_dims == ("nmonth",):
+                if len(full_param_shape) != 2:
+                    msg = (
+                        f"Expansion of monthly variable {param_name} to "
+                        f"shape {full_param_shape} is not implemented."
+                    )
+                    raise ValueError(msg)
+                rev_full_shape = full_param_shape[::-1]
+                # why the transpose? isnt the pws convention (time, space)?
+                param_dict[param_name] = np.transpose(
+                    np.broadcast_to(param_vals, rev_full_shape)
+                )
+            elif (param_name in expand_hru_to_monthly) and (
+                param_shape == full_param_shape[1:]
+            ):
+                # Some parameters come on hru and need to be (nmonths, nhru)
+                param_dict[param_name] = np.broadcast_to(
+                    param_vals, full_param_shape
+                )
+
+            else:
+                # Shapes not handled above are passed through unchanged.
+                continue
 
     return param_dict, param_dim_dict
 

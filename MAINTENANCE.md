@@ -11,6 +11,7 @@
     - [Drop the netCDF4 ndarray.shape warning filter](#drop-the-netcdf4-ndarrayshape-warning-filter)
     - [Drop the gfortran <16 ceiling (conda-forge win-64 link failure)](#drop-the-gfortran-16-ceiling-conda-forge-win-64-link-failure)
     - [PR #412 follow-ups: pre-commit notebook coverage, holoviews floor](#pr-412-follow-ups-pre-commit-notebook-coverage-holoviews-floor)
+    - [Decide the fate of preprocess_gridded_params before 4.0](#decide-the-fate-of-preprocess_gridded_params-before-40)
   - [Done](#done)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -109,10 +110,12 @@ check it), **Action** (what to do once unblocked), and optional
   for a tag above `v1.7.4rel`, then confirm the fix is in it, e.g. the
   released sdist no longer has `data.shape = tuple(datashape)` in
   `src/netCDF4/_netCDF4.pyx`.
-- **Action:** remove the
-  `ignore:Setting the shape on a NumPy array has been deprecated`
-  line (and the comment above the key) from `autotest/pytest.ini`, and
-  raise the netCDF4 floor in `environment.yml` to that release.
+- **Action:** remove `suppress_netcdf4_shape_warning` from
+  `pywatershed/utils/netcdf_utils.py` and its three uses (two there,
+  one in `pywatershed/base/budget.py`), and raise the netCDF4 floor in
+  `environment.yml` to that release. (Until 2026-09-04 this was a
+  `filterwarnings` line in `autotest/pytest.ini`, which did not reach
+  the notebook subprocesses or users' own scripts.)
 - **Notes:** netCDF4 assigns to `ndarray.shape` on every variable write
   (`_netCDF4.pyx:5616`), which NumPy >= 2.5 deprecates. Nothing on the
   pywatershed side avoids it: every assignment form was tried
@@ -208,6 +211,30 @@ check it), **Action** (what to do once unblocked), and optional
 - **Notes:** the pre-commit hook only ever sees *staged* files while CI
   runs `ruff check .` over the whole tree. That gap is what let #412's
   notebook errors reach CI in the first place.
+
+### Decide the fate of preprocess_gridded_params before 4.0
+
+- **Blocked on:** having reviewed several gridded/inactive-HRU example
+  models after the cascades port (PR #407) lands; must be settled before
+  the first 4.0 release (check: no `4.0.0` tag at
+  `https://api.github.com/repos/DOI-USGS/pywatershed/releases`).
+- **Action:** keep or delete
+  `pywatershed/utils/preprocess_gridded.py::preprocess_gridded_params`.
+  - If kept: state in its docstring that processes never read the
+    variables it writes (`active_hru_mask`, `wh_active_hrus`,
+    `nactive_hrus` are always derived from `hru_type` by
+    `base.HruMixin._set_active_hrus`), and add the `nactive_hru`
+    dimension it introduces to `pywatershed/static/metadata/dimensions.yaml`.
+  - If deleted: remove it from `doc/api/utils.rst`, delete
+    `autotest/test_preprocess_gridded.py`'s tests of it (keep those of
+    `get_active_hru_params`, which the mixin uses), and note the removal
+    in whats-new.
+- **Notes:** the PR #407 review (B3/B7, 2026-09-02) fixed the function's
+  crash and removed the mixin's dead "use supplied mask" path, making
+  `hru_type` the single source of truth. That left the function public
+  with zero callers, writing three variables nothing consumes. Deleting
+  was recommended; James kept it pending experience with real gridded
+  setups.
 
 ## Done
 

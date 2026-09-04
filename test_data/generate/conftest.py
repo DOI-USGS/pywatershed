@@ -180,11 +180,14 @@ def collect_simulations(
             continue
 
         # ensure this is a self-contained run (all files in repo)
+        # domains with a make_cbh_only control generate their own CBH
+        # forcing files with PRMS and are also self-contained
         if not (
             (dom_dir / "prcp.cbh").exists()
             or (dom_dir / "prcp.day").exists()
             or (dom_dir / "precip.cbh").exists()
             or (dom_dir / "precip.day").exists()
+            or len(list(dom_dir.glob("*make_cbh_only*.control")))
         ):
             # this is kind of a silly check... until something better needed
             warn(f"prcp/precip.cbh/day not found in {dom_dir}, skipping")

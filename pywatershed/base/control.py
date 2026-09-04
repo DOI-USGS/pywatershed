@@ -29,6 +29,8 @@ from .accessor import Accessor
 pws_control_options_avail = [
     "imbalance_behavior",
     "calc_method",
+    "cascade_flag",
+    "cascadegw_flag",
     "dprst_flag",
     "input_dir",  #
     "input_file",
@@ -61,6 +63,8 @@ pws_control_options_avail = [
 ]
 
 prms_legacy_options_avail = [
+    "cascade_flag",
+    "cascadegw_flag",
     "dprst_flag",
     "end_time",
     "initial_deltat",

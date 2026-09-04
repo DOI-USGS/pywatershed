@@ -1,5 +1,7 @@
+import contextlib
 import datetime as dt
 import pathlib as pl
+import warnings
 from math import ceil
 from typing import Union
 
@@ -11,6 +13,27 @@ from ..base.accessor import Accessor
 from ..base.meta import meta_dimensions, meta_netcdf_type
 from ..constants import np_type_to_netcdf_type_dict
 from ..utils.time_utils import datetime_doy
+
+
+@contextlib.contextmanager
+def suppress_netcdf4_shape_warning():
+    """Silence netCDF4's ndarray.shape assignment on every variable write.
+
+    netCDF4 <= 1.7.4 assigns to ndarray.shape inside its Cython write
+    path, which NumPy >= 2.5 deprecates; the warning is attributed to
+    the calling Python frame, i.e. to us. Fixed upstream by
+    netcdf4-python PR #1469 (merged 2026-02-17, unreleased as of
+    1.7.4). Remove this and its uses once that release is required.
+    See MAINTENANCE.md.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Setting the shape on a NumPy array has been deprecated",
+            category=DeprecationWarning,
+        )
+        yield
+
 
 fileish = Union[str, pl.Path]
 listish = Union[list, tuple]
@@ -75,8 +98,10 @@ class NetCdfRead(Accessor):
         self.close()
 
     def close(self):
-        if self.dataset.isopen():
-            self.dataset.close()
+        # __init__ may have failed before the file was opened
+        dataset = getattr(self, "dataset", None)
+        if dataset is not None and dataset.isopen():
+            dataset.close()
 
     def _open_nc_file(self):
         self.dataset = nc4.Dataset(self._nc_file, "r")
@@ -634,8 +659,10 @@ class NetCdfWrite(Accessor):
         return
 
     def close(self):
-        if self.dataset.isopen():
-            self.dataset.close()
+        # __init__ may have failed before the file was opened
+        dataset = getattr(self, "dataset", None)
+        if dataset is not None and dataset.isopen():
+            dataset.close()
             return
 
     def add_simulation_time(self, itime_step: int, simulation_time: float):
@@ -657,7 +684,8 @@ class NetCdfWrite(Accessor):
         if name not in self.variables.keys():
             raise KeyError(f"{name} not a valid variable name")
         var = self.variables[name]
-        var[itime_step, :] = current[:]
+        with suppress_netcdf4_shape_warning():
+            var[itime_step, :] = current[:]
         return
 
     def add_all_data(
@@ -692,7 +720,8 @@ class NetCdfWrite(Accessor):
             # currently just doy
             self[time_coord][:] = time_data
 
-        self.variables[name][:, :] = data[:, :]
+        with suppress_netcdf4_shape_warning():
+            self.variables[name][:, :] = data[:, :]
 
         return
 

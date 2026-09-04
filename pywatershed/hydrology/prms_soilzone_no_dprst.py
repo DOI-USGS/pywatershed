@@ -138,7 +138,7 @@ class PRMSSoilzoneNoDprst(PRMSSoilzone):
         )
 
         self.name = "PRMSSoilzoneNoDprst"
-        self._set_budget()
+        self._set_budget(active_mask=self._active_hru_mask)
 
         return
 
@@ -302,6 +302,10 @@ class PRMSSoilzoneNoDprst(PRMSSoilzone):
             self.ssres_stor[:],
             self.swale_actet[:],
             self.unused_potet[:],
+            # cascade returns:
+            _,
+            _,
+            _,
         ) = self._calculate_soilzone(
             _pref_flow_flag=self._pref_flow_flag,
             _snow_free=self._snow_free,
@@ -382,6 +386,19 @@ class PRMSSoilzoneNoDprst(PRMSSoilzone):
             swale_actet=self.swale_actet,
             transp_on=self.transp_on,
             unused_potet=self.unused_potet,
+            ncascade_hru=None,
+            nactive_hrus=self._nactive_hrus,
+            hru_route_order=self.hru_route_order,
+            hru_down=None,
+            hru_down_frac=None,
+            hru_down_fracwt=None,
+            cascade_area=None,
+            upslope_dunnianflow=None,
+            upslope_interflow=None,
+            hru_sz_cascadeflow=None,
+            stream_seg_in=None,
+            cfs_conv=None,
+            _compute_cascades=self._compute_cascades,
         )
 
         self.sroff_vol[:] = self.sroff * self.hru_in_to_cf

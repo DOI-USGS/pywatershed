@@ -143,3 +143,40 @@ def test_budget(control_simple):
     print(budget)
 
     return
+
+
+@pytest.mark.domainless
+@pytest.mark.filterwarnings("ignore:Metadata unavailable")
+def test_budget_active_mask_imbalance_indices(control_simple):
+    # inactive hru 0 and 2 shift the compressed positions; the reported
+    # locations must still be full hru indices (here 3 and 4).
+    nhru = 5
+    active_mask = np.array([False, True, False, True, True])
+    inputs = {"in1": np.ones([nhru])}
+    outputs = {"out1": np.ones([nhru])}
+    storage_changes = {"stor1": np.zeros([nhru])}
+    storage_changes["stor1"][3:] = 7.0
+    # mirror _mask_inactive_hrus: inactive hrus hold nan in every term
+    for arr in (inputs["in1"], outputs["out1"], storage_changes["stor1"]):
+        arr[~active_mask] = np.nan
+    terms = {
+        "inputs": inputs,
+        "outputs": outputs,
+        "storage_changes": storage_changes,
+    }
+    terms_keys = {key: list(val.keys()) for key, val in terms.items()}
+    budget = Budget(
+        control_simple,
+        **terms_keys,
+        time_unit="D",
+        description="masked_test",
+        units="m*3/D",
+        verbose=False,
+        active_mask=active_mask,
+        imbalance_fatal=True,
+    )
+    budget.set(terms)
+    control_simple.advance()
+    budget.advance()
+    with pytest.raises(ValueError, match=r"\[3 4\]"):
+        budget.calculate()

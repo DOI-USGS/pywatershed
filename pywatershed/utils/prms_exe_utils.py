@@ -129,7 +129,9 @@ def get_prms_exe_name(exe_desc: str = "prms") -> str:
         return f"prms_5.2.1.1_gfort_{tag}_dbl_prec{suffix}"
 
     else:
-        # Default PRMS binary, version 5.2.1
+        # Default PRMS binary, version 5.2.1 -- the repository's
+        # prms_src/prms5.2.1 source, with the cascades and G0-precision
+        # CBH output patches, compiled on demand.
         return f"prms_{tag}_gfort_dbl_prec{suffix}"
 
 
@@ -194,6 +196,8 @@ def compile_prms(
     ------
     ValueError
         If *source* is not a supported value.
+    FileNotFoundError
+        If make, gcc, or gfortran is not found on the PATH.
     RuntimeError
         If compilation succeeds but the expected output binary is missing.
     subprocess.CalledProcessError
@@ -226,6 +230,28 @@ def compile_prms(
             f"Binary dest: {binary_path}\n"
         )
 
+        # Prefer the compilers of the active python environment (e.g.
+        # conda-forge gcc/gfortran) over whatever is on the PATH: local
+        # PATHs can put stale/mismatched toolchains first. The compiler
+        # names must remain plain "gcc"/"gfortran" as the makelists key
+        # their flags on these exact names.
+        sub_env = os.environ.copy()
+        env_bin = pl.Path(sys.prefix) / "bin"
+        if (env_bin / "gfortran").exists():
+            sub_env["PATH"] = str(env_bin) + os.pathsep + sub_env["PATH"]
+
+        missing = [
+            tool
+            for tool in ("make", "gcc", "gfortran")
+            if shutil.which(tool, path=sub_env["PATH"]) is None
+        ]
+        if missing:
+            raise FileNotFoundError(
+                f"Cannot compile PRMS {source}: {', '.join(missing)} not "
+                "found on PATH. A gcc/gfortran/make toolchain is required "
+                "(e.g. from conda-forge); see DEVELOPER.md."
+            )
+
         orig_dir = pl.Path.cwd()
         try:
             os.chdir(src_dir)
@@ -234,6 +260,7 @@ def compile_prms(
             subprocess.run(
                 ["make", "clean", "MAKE=make"],
                 check=True,
+                env=sub_env,
             )
 
             # Build with double precision
@@ -246,6 +273,7 @@ def compile_prms(
                     "MAKE=make",
                 ],
                 check=True,
+                env=sub_env,
             )
 
             # The makefile links with `-o ../bin/prms`.  On Windows the

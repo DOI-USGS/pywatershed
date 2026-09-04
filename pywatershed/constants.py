@@ -48,6 +48,9 @@ closezero = epsilon32
 fill_value_f4 = 9.96921e36
 
 # work in progress...
+# Default netcdf _FillValue by dtype (used by dd_to_nc4_ds). Ints have no
+# default: an int _FillValue makes xarray promote the variable to float on
+# read and turns legitimate sentinel values (e.g. -9999) into NaN.
 fill_values_dict = {
     np.dtype("float64"): np.nan,
     np.dtype("float32"): np.nan,
@@ -57,6 +60,17 @@ fill_values_dict = {
     np.dtype("int16"): None,
     np.dtype("int8"): None,
     np.dtype("bool"): None,
+}
+
+# In-memory fill values for masking inactive HRUs (HruMixin). Not a netcdf
+# encoding default.
+mask_fill_values_dict = {
+    **fill_values_dict,
+    np.dtype("int64"): -9999,
+    np.dtype("int32"): -9999,
+    np.dtype("int16"): -9999,
+    np.dtype("int8"): -9999,
+    np.dtype("bool"): False,
 }
 
 np_type_to_netcdf_type_dict = {
@@ -91,17 +105,30 @@ cms_to_cfs = 35.314666721489
 cfs_to_cms = 1 / cms_to_cfs
 cm_to_cf = cms_to_cfs
 cf_to_cm = cfs_to_cms
+cubic_ft_per_acre_in = ft2_per_acre / inches_per_foot
 
 
 ndoy = 366
 nmonth = 12
 
+INACTIVE = 0
+ACTIVE = 1
+
 
 class HruType(Enum):
+    """HRU Type
     INACTIVE = 0
     LAND = 1
     LAKE = 2
     SWALE = 3
+    GLACIER = 4
+    """
+
+    INACTIVE = 0
+    LAND = 1
+    LAKE = 2
+    SWALE = 3
+    GLACIER = 4
 
 
 class CovType(Enum):

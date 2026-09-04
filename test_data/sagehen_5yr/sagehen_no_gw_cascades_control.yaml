@@ -1,0 +1,18 @@
+# ISO 8601 strings for numpy datetime64
+start_time: 1980-10-01T00:00:00
+end_time: 1985-09-30T00:00:00
+
+# The two arguments to get a numpy timedelta64
+time_step: 24
+time_step_units: h
+
+# Verbosity goes to 10
+verbosity: 0
+
+# input_dir: .
+
+imbalance_behavior: warn
+calc_method: numba
+dprst_flag: false
+
+parameter_file: myparam.param

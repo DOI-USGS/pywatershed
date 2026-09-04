@@ -6,6 +6,9 @@ from utils_compare import compare_in_memory, compare_netcdfs
 from pywatershed.base.adapter import adapter_factory
 from pywatershed.base.control import Control
 from pywatershed.hydrology.prms_soilzone import PRMSSoilzone
+from pywatershed.hydrology.prms_soilzone_cascades_no_dprst import (
+    PRMSSoilzoneCascadesNoDprst,
+)
 from pywatershed.hydrology.prms_soilzone_no_dprst import PRMSSoilzoneNoDprst
 from pywatershed.parameters import Parameters, PrmsParameters
 
@@ -32,8 +35,25 @@ def Soilzone(control):
         "dprst_flag" in control.options.keys()
         and control.options["dprst_flag"]
     ):
-        Soilzone = PRMSSoilzone
+        dprst_active = True
     else:
+        dprst_active = False
+
+    if (
+        "cascade_flag" in control.options.keys()
+        and control.options["cascade_flag"]
+    ):
+        cascades_active = True
+    else:
+        cascades_active = False
+
+    if dprst_active and cascades_active:
+        raise NotImplementedError("No such subclass yet exists")
+    elif dprst_active and not cascades_active:
+        Soilzone = PRMSSoilzone
+    elif not dprst_active and cascades_active:
+        Soilzone = PRMSSoilzoneCascadesNoDprst
+    elif not dprst_active and not cascades_active:
         Soilzone = PRMSSoilzoneNoDprst
 
     return Soilzone
@@ -53,6 +73,19 @@ def parameters(simulation, control, request):
     else:
         param_file = simulation["dir"] / "parameters_PRMSSoilzone.nc"
         params = PrmsParameters.from_netcdf(param_file)
+
+    if (
+        "cascade_flag" in control.options.keys()
+        and control.options["cascade_flag"]
+    ):
+        # With cascades, upslope inflows couple the HRUs within the
+        # timestep and sroff is an inout variable: the isolated,
+        # PRMS-forced comparison is not valid. The coupled check is
+        # test_prms_below_snow.
+        pytest.skip(
+            "isolated soilzone comparison invalid with cascades. "
+            f"Skipping: {simulation['name']}"
+        )
 
     return params
 

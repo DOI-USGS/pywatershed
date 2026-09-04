@@ -43,6 +43,16 @@ test_models = {
         pywatershed.PRMSSoilzoneNoDprst,
         pywatershed.PRMSGroundwaterNoDprst,
     ],
+    "sagehen_no_gw_cascades": [
+        pywatershed.PRMSRunoffCascadesNoDprst,
+        pywatershed.PRMSSoilzoneCascadesNoDprst,
+        pywatershed.PRMSGroundwaterNoDprst,
+    ],
+    "sagehen_gridded_cascades": [
+        pywatershed.PRMSRunoffCascadesNoDprst,
+        pywatershed.PRMSSoilzoneCascadesNoDprst,
+        pywatershed.PRMSGroundwaterNoDprst,
+    ],
 }
 
 comparison_vars_dict_all = {
@@ -66,8 +76,10 @@ comparison_vars_dict_all = {
 
 tol = {
     "PRMSRunoff": 1.0e-8,
+    "PRMSRunoffCascadesNoDprst": 1.0e-8,
     "PRMSRunoffNoDprst": 1.0e-8,
     "PRMSSoilzone": 1.0e-8,
+    "PRMSSoilzoneCascadesNoDprst": 1.0e-8,
     "PRMSSoilzoneNoDprst": 1.0e-8,
     "PRMSGroundwater": 1.0e-8,
     "PRMSGroundwaterNoDprst": 1.0e-8,
@@ -87,7 +99,7 @@ def control(simulation):
         simulation["control_file"], warn_unused_options=False
     )
     control.options["verbosity"] = 10
-    control.options["imbalance_behavior"] = None
+    control.options["imbalance_behavior"] = "error"
     control.options["calc_method"] = "numba"
     del control.options["netcdf_output_var_names"]
     return control
@@ -214,6 +226,11 @@ def test_model(simulation, model_args, tmp_path):
 
     model = Model(**model_args, write_control=model_out_dir)
 
+    # every process, including subclasses that set self.name before
+    # super().__init__(), reports its own class name
+    for proc in model.processes.values():
+        assert proc.name == proc.__class__.__name__
+
     # check that control yaml file was written
     control_yaml_file = sorted(model_out_dir.glob("*model_control.yaml"))
     assert len(control_yaml_file) == 1
@@ -224,6 +241,17 @@ def test_model(simulation, model_args, tmp_path):
 
     for vv in ["PRMSRunoff", "PRMSSoilzone", "PRMSGroundwater"]:
         comparison_vars_dict_all[f"{vv}NoDprst"] = comparison_vars_dict_all[vv]
+
+    comparison_vars_dict_all["PRMSRunoffCascadesNoDprst"] = list(
+        pywatershed.PRMSRunoffCascadesNoDprst.get_variables()
+    )
+    comparison_vars_dict_all["PRMSSoilzoneCascadesNoDprst"] = list(
+        comparison_vars_dict_all["PRMSSoilzone"]
+    ) + [
+        "hru_sz_cascadeflow",
+        "upslope_dunnianflow",
+        "upslope_interflow",
+    ]
 
     comparison_vars_dict = {}
 
@@ -327,6 +355,7 @@ def check_timestep_results(
 ):
     # print(storageunit)
     all_success = True
+    active_mask = getattr(storageunit, "_active_hru_mask", None)
     for key in ans.keys():
         # print(key)
         a1 = ans[key].current
@@ -334,6 +363,11 @@ def check_timestep_results(
             a2 = storageunit[key].current
         else:
             a2 = storageunit[key]
+        if active_mask is not None and np.shape(a1) == np.shape(active_mask):
+            # compare only at active HRUs; pywatershed masks inactive
+            # HRUs to nan while PRMS generally reports zeros there.
+            a1 = np.asarray(a1)[active_mask]
+            a2 = np.asarray(a2)[active_mask]
         success_a = np.isclose(a2, a1, atol=tol, rtol=0.0)
         success_r = np.isclose(a2, a1, atol=0.0, rtol=tol)
         success = success_a | success_r

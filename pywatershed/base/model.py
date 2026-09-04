@@ -8,7 +8,7 @@ from ..base.adapter import adapter_factory
 from ..base.control import Control
 from ..base.output import Output
 from ..constants import fileish
-from ..parameters import Parameters, PrmsParameters
+from ..parameters import Parameters
 from ..utils.path import path_rel_to_yaml
 
 # This is a convenience
@@ -19,10 +19,12 @@ process_order_nhm = [
     "PRMSSnow",
     "PRMSRunoff",
     "PRMSRunoffAg",
+    "PRMSRunoffCascadesNoDprst",
     "PRMSRunoffNoDprst",
     "PRMSSoilzone",
     "PRMSSoilzoneAg",
     "PRMSSoilzoneAgObsET",
+    "PRMSSoilzoneCascadesNoDprst",
     "PRMSSoilzoneNoDprst",
     "PRMSEt",
     "PRMSGroundwater",
@@ -67,7 +69,7 @@ class Model:
 
     * process_list_or_model_dict: A process list of PRMS model components.
     * control: A Control object.
-    * parameters: A PrmsParameters object.
+    * parameters: A Parameters object (e.g. PrmsParameters).
 
     The first example below provides details. An extended example is given by
     `examples/02_prms_legacy_models.ipynb <https://github.com/DOI-USGS/pywatershed/blob/develop/examples/02_prms_legacy_models.ipynb>`__.
@@ -304,7 +306,7 @@ class Model:
             # take the old-school-style inputs and convert to new-school inputs
             # may be deprecated in the future.
             assert control is not None, msg
-            assert isinstance(parameters, PrmsParameters), msg
+            assert isinstance(parameters, Parameters), msg
 
             # eventually handle a file for parameters?
             # proc_param_file = domain["dir"] / f"parameters_{proc_name}.nc"
@@ -684,7 +686,16 @@ class Model:
                 nc_path = self._input_path / f"{file_var_name}.nc"
                 # currently netcdf files or dynamic parameter files accepted
                 if not nc_path.exists():
-                    nc_path = self._input_path / f"{file_var_name}.param"
+                    param_path = self._input_path / f"{file_var_name}.param"
+                    if not param_path.exists():
+                        aka = "" if file_var_name == name else f" (as {name})"
+                        msg = (
+                            f"No input file found for '{file_var_name}'"
+                            f"{aka} in {self._input_path}: looked for "
+                            f"'{nc_path.name}' and '{param_path.name}'."
+                        )
+                        raise FileNotFoundError(msg)
+                    nc_path = param_path
             else:
                 nc_path = self._input_path
             input_adapters[name] = adapter_factory(

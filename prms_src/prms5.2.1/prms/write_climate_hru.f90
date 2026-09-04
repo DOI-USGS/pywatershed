@@ -126,7 +126,7 @@
 
  9001 FORMAT ( 'Generated for climate_hru module', /, A, I8, /, 40('#') )
  9002 FORMAT ( 'Generated for climate_hru module', /, A, I8, /, 'orad 1', /, 40('#') )
- 9003 FORMAT ( '(I4,2I3,3I2,',I8,'E12.4)' )
+ 9003 FORMAT ( '(I4,2I3,3I2,',I8,'(''  '', G0))' )
  9004 FORMAT ( '(I4,2I3,3I2,',I8,'I3)' )
 
       END FUNCTION write_climate_hru

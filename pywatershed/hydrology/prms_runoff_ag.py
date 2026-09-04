@@ -713,6 +713,11 @@ class PRMSRunoffAg(PRMSRunoff):
                 perv_comp=perv_comp,
                 through_rain=through_rain[i],
                 intcp_changeover_in_net_rain=intcp_changeover_in_net_rain,
+                # cascades are not active for ag, arrays are unused
+                ncascade_hru=net_rain,
+                ncascade_hru_active=False,
+                upslope_hortonian=net_rain,
+                ihru=i,
             )
 
             # Calculate agricultural infiltration (if ag area exists)

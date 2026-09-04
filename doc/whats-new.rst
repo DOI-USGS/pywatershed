@@ -25,6 +25,27 @@ New Features
   additions to the v3.0.0 Breaking Changes section below record five changes
   it documents that were found undocumented.
   (:pull:`416`) By `James McCreight <https://github.com/jmccreight>`_.
+- HRU cascading flow (Hortonian surface runoff and soilzone interflow /
+  Dunnian flow) following PRMS ``cascade_flag=1`` with
+  ``cascadegw_flag=0``: new process classes
+  :class:`PRMSRunoffCascadesNoDprst` and
+  :class:`PRMSSoilzoneCascadesNoDprst`, cascade parameter preprocessing
+  from PRMS parameter files
+  (:func:`~utils.preprocess_cascades.preprocess_cascade_params`), and
+  support for inactive HRUs via :class:`base.HruMixin` (which HRUs are
+  active is always derived from the ``hru_type`` parameter; results at
+  inactive HRUs are masked to ``nan`` and excluded from mass-balance
+  checks by the new ``active_mask`` capability of :class:`base.Budget`).
+  Verified against PRMS 5.2.1 on the ``sagehen_5yr``
+  (``sagehen_no_gw_cascades``) and new gridded ``sagehen_gridded_5yr``
+  (5609 cells with inactive cells) test domains, both tested in CI on
+  all platforms. (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+- The reference PRMS 5.2.1 binary (with cascades and full-precision CBH
+  output patches) is now compiled on demand from ``prms_src`` by the
+  test-data generation machinery
+  (:func:`~utils.prms_exe_utils.compile_prms`); the gridded sagehen
+  domain generates its own CBH forcing files with PRMS, making it fully
+  reproducible from a clean clone. (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
@@ -34,6 +55,28 @@ Breaking Changes
   :class:`PRMSCanopy` its inputs individually must be updated; models
   assembled from process lists or model dictionaries are unaffected.
   (:pull:`414`) By `James McCreight <https://github.com/jmccreight>`_.
+- ``hru_type`` is now a declared parameter of :class:`PRMSAtmosphere`,
+  :class:`PRMSAtmosphereTranspFrost`,
+  :class:`PRMSAtmosphereTranspFrostDynamic`, :class:`PRMSSolarGeometry`,
+  :class:`PRMSCanopy`, :class:`PRMSGroundwater` and
+  :class:`PRMSGroundwaterNoDprst`, which use it (through
+  :class:`base.HruMixin`) to identify inactive HRUs. A :class:`Parameters`
+  object built by hand for one of these processes must now include
+  ``hru_type``; PRMS parameter files and the ``parameters_dis_hru.nc``
+  discretization file written by
+  :func:`~utils.separate_nhm_params.separate_domain_params_dis_to_ncdf`
+  already carry it. As a consequence, :class:`PRMSCanopy` now applies
+  PRMS's lake treatment to HRUs with ``hru_type`` lake (no interception),
+  where it previously treated every HRU as land; results change on domains
+  with lake HRUs. Note that lake HRUs are currently untested in pywatershed:
+  no test domain contains one.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+- Keyword arguments were inserted mid-signature: ``stream_seg_in=None``
+  now precedes ``dprst_flag`` in :class:`PRMSSoilzone` and
+  :class:`PRMSSoilzoneNoDprst`, and ``active_mask=False`` precedes
+  ``unit_desc`` in :class:`base.Budget`. Code passing those or any later
+  arguments positionally must switch to keywords.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
 
 Bug fixes
 ~~~~~~~~~
@@ -49,6 +92,26 @@ Bug fixes
   intercepted. :class:`PRMSSnow` now declares ``pkwater_ante``, as
   ``snowcomp`` does (``snowcomp.f90:346-349``), so coupled models supply it.
   (:pull:`414`) By `James McCreight <https://github.com/jmccreight>`_.
+- :class:`Model` reports both candidate filenames when an input file is
+  missing. Input discovery looks for ``<variable>.nc`` in the input directory
+  and, failing that, retries the same name as ``<variable>.param``; only the
+  second name reached the error, so a missing netCDF input was reported as a
+  not-found dynamic parameter file. Both lookups are now checked up front and
+  a missing input raises naming both candidates.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+- Integer variables written by :func:`dd_to_nc4_ds` (and so by
+  :class:`DatasetDict` and :func:`separate_nhm_params`) no longer carry a
+  default ``_FillValue`` of -9999, which made xarray promote them to float
+  on read and turn legitimate -9999 values into NaN. The in-memory fill used
+  to mask inactive HRUs is now the separate ``mask_fill_values_dict``.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+- Reading a PRMS parameter file no longer raises for a parameter with an
+  expandable scalar form that is supplied at some other, unhandled shape;
+  such parameters pass through unchanged as before. A monthly parameter is
+  now recognized by its declared ``nmonth`` dimension rather than by having
+  12 values, so a per-HRU array on a 12-HRU domain is no longer misread as
+  monthly.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
 
 Internal changes
 ~~~~~~~~~~~~~~~~
@@ -122,6 +185,11 @@ Internal changes
   commit message — see DEVELOPER.md. ``concurrency`` groups cancel in-flight
   runs superseded by a newer push on the same non-mainline ref.
   (:pull:`408`) By `James McCreight <https://github.com/jmccreight>`_.
+- ``PRMSAtmosphere``, ``PRMSSolarGeometry``, ``PRMSCanopy``,
+  ``PRMSSnow``, ``PRMSRunoff*``, ``PRMSSoilzone*`` and
+  ``PRMSGroundwater*`` compute over active HRUs (in routing order where
+  applicable) rather than all HRUs. All-active domains are unaffected.
+  (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
 - Require pyPRMS >=0.10.0 and remove the temporary ``packaging <26.3`` pin it
   supersedes (pyPRMS 0.9.10 crashed on import of metadata with packaging >=26.3).
   Also remove calls to pyPRMS methods deprecated in 0.10.0:

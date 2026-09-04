@@ -4,6 +4,7 @@ from typing import Literal, Tuple, Union
 
 import numpy as np
 
+from pywatershed.base.hru_mixin import HruMixin
 from pywatershed.base.process import Process
 from pywatershed.utils.netcdf_utils import NetCdfWrite
 
@@ -28,7 +29,7 @@ def tile_space_to_time(arr: np.ndarray) -> np.ndarray:
 #    return np.transpose(np.tile(arr, (n_hru, 1)))
 
 
-class PRMSSolarGeometry(Process):
+class PRMSSolarGeometry(Process, HruMixin):
     """PRMS solar geometry.
 
     Implementation based on PRMS 5.2.1 with theoretical documentation given in
@@ -89,9 +90,10 @@ class PRMSSolarGeometry(Process):
             parameters=parameters,
             input_aliases=input_aliases,
         )
+        self.name = "PRMSSolarGeometry"
+        self._set_active_hrus()
         self._set_inputs(locals())
         self._set_options(locals())
-        self.name = "PRMSSolarGeometry"
 
         if from_prms_file:
             (
@@ -142,6 +144,7 @@ class PRMSSolarGeometry(Process):
             "hru_lat",
             "hru_area",
             "hru_aspect",
+            "hru_type",
         )
 
     @staticmethod
@@ -176,6 +179,8 @@ class PRMSSolarGeometry(Process):
             self.compute_t,
             self.func3,
         )
+
+        self._mask_inactive_hrus()
 
         self._calculated = True
         return

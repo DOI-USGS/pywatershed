@@ -344,6 +344,7 @@ jobs:
           --ignore=test_obsin_flow_node.py
           --ignore=test_output.py
           --ignore=test_pass_through_flow_graph.py
+          --ignore=test_preprocess_cascades.py
           --ignore=test_prms_atmosphere_transp_frost.py
           --ignore=test_prms_atmosphere_transp_frost_dynamic.py
           --ignore=test_prms_channel.py
@@ -362,6 +363,43 @@ jobs:
           --ignore=test_source_sink_flow_node.py
           --ignore=test_starfit_flow_graph.py
 
+      - name: sagehen_5yr_no_gw_cascades - generate and manage test data domain, run PRMS and convert csv output to NetCDF
+        working-directory: autotest
+        run: |
+          python generate_test_data.py \
+            --domain=sagehen_5yr \
+            --control_pattern=sagehen_no_gw_cascades.control \
+            --remove_prms_csvs --remove_prms_output_dirs
+
+      - name: sagehen_5yr_no_gw_cascades - list netcdf input files
+        working-directory: test_data
+        run: |
+          find sagehen_5yr/output_no_gw_cascades -name '*.nc' | sort -n
+
+      - name: sagehen_5yr_no_gw_cascades - pywatershed tests
+        working-directory: autotest
+        run: pytest
+          -vv
+          -rs
+          -n=auto
+          -m "not domainless"
+          --domain=sagehen_5yr
+          --control_pattern=sagehen_no_gw_cascades.control
+          --durations=0
+          --error-for-skips
+          --cov=pywatershed
+          --cov-report=xml
+          --junitxml=pytest_sagehen_5yr_no_gw_cascades.xml
+          test_preprocess_cascades.py
+          test_prms_above_snow.py
+          test_prms_atmosphere.py
+          test_prms_below_snow.py
+          test_prms_canopy.py
+          test_prms_groundwater.py
+          test_prms_snow.py
+          test_prms_solar_geom.py
+          test_self_drive.py
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v6
@@ -369,6 +407,143 @@ jobs:
           name: Test results for sagehen_5yr-${{ runner.os }}-${{ matrix.python-version }}
           path: |
             ./autotest/pytest_sagehen_5yr_no_cascades.xml
+            ./autotest/pytest_sagehen_5yr_no_gw_cascades.xml
+
+      - name: Upload code coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./autotest/coverage.xml
+          env_vars: RUNNER_OS,PYTHON_VERSION
+          fail_ci_if_error: false
+          version: "v0.1.15"
+
+  test_sagehen_gridded_5yr:
+    name: sagehen_gridded_5yr ${{ matrix.os }} py${{ matrix.python-version }}
+    # domain jobs skip plain branch pushes; see the ci-<token> note
+    # in the trigger comment at the top of this file
+    if: >-
+      github.event_name != 'push' ||
+      github.ref_name == 'develop' ||
+      github.ref_name == 'main' ||
+      contains(github.ref_name, 'ci-all') ||
+      contains(github.event.head_commit.message, 'ci-all') ||
+      contains(github.ref_name, 'ci-sagehen') ||
+      contains(github.event.head_commit.message, 'ci-sagehen')
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        python-version: ["3.13"]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+
+      - name: Install Dependencies via Micromamba
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          log-level: debug
+          environment-file: environment.yml
+          cache-environment: true
+          cache-downloads: true
+          create-args: >-
+            python=${{matrix.python-version}}
+
+      - name: Link conda gfortran dylibs on Mac
+        if: runner.os == 'macOS'
+        run: .github/scripts/symlink_gfortran_mac.sh
+
+      - name: Install pywatershed
+        run: |
+          pip install .
+
+      - name: Version info
+        run: |
+          pip -V
+          pip list
+
+      - name: Compile PRMS 5.2.1
+        working-directory: prms_src/prms5.2.1
+        run: |
+          which gfortran
+          gfortran --version
+          which make
+          MAKE_PATH=$(which make)
+          $MAKE_PATH clean MAKE="$MAKE_PATH"
+          $MAKE_PATH DBL_PREC=true FC=gfortran CC=gcc MAKE="$MAKE_PATH"
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp bin/prms ../../bin/prms_5.2.1_gfort_win_dbl_prec.exe
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            cp bin/prms ../../bin/prms_5.2.1_gfortran_apple_silicon_dbl_prec
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+            cp bin/prms ../../bin/prms_5.2.1_gfort_linux_dbl_prec
+          fi
+
+      - name: sagehen_gridded_5yr - generate CBH forcing files with PRMS
+        working-directory: autotest
+        run: |
+          python generate_test_data.py \
+            --domain=sagehen_gridded_5yr \
+            --control_pattern=make_cbh_only
+
+      - name: sagehen_gridded_5yr - generate and manage test data domain, run PRMS and convert csv output to NetCDF
+        working-directory: autotest
+        run: |
+          python generate_test_data.py \
+            --domain=sagehen_gridded_5yr \
+            --control_pattern=sagehen_gridded_cascades.control \
+            --remove_prms_csvs --remove_prms_output_dirs
+
+      - name: sagehen_gridded_5yr - remove PRMS CBH day files (disk space)
+        working-directory: test_data
+        run: |
+          # the .day files (~600 MB) drive the PRMS runs above; the tests
+          # only read the netcdf CBH files (prcp/tmax/tmin.nc)
+          rm -f sagehen_gridded_5yr/*.day
+          df -h . || true
+
+      - name: sagehen_gridded_5yr - list netcdf input files
+        working-directory: test_data
+        run: |
+          find sagehen_gridded_5yr/output_cascades -name '*.nc' | sort -n
+
+      - name: sagehen_gridded_5yr - pywatershed tests
+        working-directory: autotest
+        # -n limited (not auto): xdist workers x the gridded domain's memory
+        # footprint OOMs the ubuntu runner (pytest killed, exit 143), even
+        # at -n=2, so run serially there; other OSes are fine at -n=2
+        run: pytest
+          -vv
+          -rs
+          -n=${{ runner.os == 'Linux' && '1' || '2' }}
+          -m "not domainless"
+          --domain=sagehen_gridded_5yr
+          --durations=0
+          --error-for-skips
+          --cov=pywatershed
+          --cov-report=xml
+          --junitxml=pytest_sagehen_gridded_5yr_cascades.xml
+          test_prms_above_snow.py
+          test_prms_below_snow.py
+          test_prms_groundwater.py
+          test_prms_snow.py
+          test_prms_solar_geom.py
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: Test results for sagehen_gridded_5yr-${{ runner.os }}-${{ matrix.python-version }}
+          path: |
+            ./autotest/pytest_sagehen_gridded_5yr_cascades.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -477,6 +652,7 @@ jobs:
           --ignore=test_obsin_flow_node.py
           --ignore=test_output.py
           --ignore=test_pass_through_flow_graph.py
+          --ignore=test_preprocess_cascades.py
           --ignore=test_prms_atmosphere_transp_frost.py
           --ignore=test_prms_atmosphere_transp_frost_dynamic.py
           --ignore=test_prms_channel_flow_graph.py
@@ -653,6 +829,7 @@ jobs:
           --cov-report=xml
           --junitxml=pytest_drb_2yr_nhm.xml
           --ignore=test_obsin_flow_node.py
+          --ignore=test_preprocess_cascades.py
           --ignore=test_prms_dyn_params.py
           --ignore=test_prms_atmosphere_transp_frost.py
           --ignore=test_prms_atmosphere_transp_frost_dynamic.py
@@ -870,6 +1047,7 @@ jobs:
           --ignore=test_obsin_flow_node.py
           --ignore=test_output.py
           --ignore=test_pass_through_flow_graph.py
+          --ignore=test_preprocess_cascades.py
           --ignore=test_prms_atmosphere_transp_frost.py
           --ignore=test_prms_atmosphere_transp_frost_dynamic.py
           --ignore=test_mmr_to_mf6_dfw.py

@@ -359,7 +359,10 @@ def diagnose_final_vars_to_nc(
         ds.close()
 
     # The rest of the conversion is on ly for muskingum_mann variables
-    if control.options["streamflow_module"] != "muskingum_mann":
+    if (
+        "streamflow_module" not in control.options.keys()
+        or control.options["streamflow_module"] != "muskingum_mann"
+    ):
         return True
 
     if var_name == "seg_lateral_inflow":

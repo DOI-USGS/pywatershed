@@ -4,6 +4,7 @@ from warnings import warn
 
 import numpy as np
 
+from pywatershed.base.hru_mixin import HruMixin
 from pywatershed.base.process import Process
 from pywatershed.utils.netcdf_utils import NetCdfWrite
 
@@ -30,7 +31,7 @@ def tile_time_to_space(arr: np.ndarray, n_space) -> np.ndarray:
     return np.transpose(np.tile(arr, (n_space, 1)))
 
 
-class PRMSAtmosphere(Process):
+class PRMSAtmosphere(Process, HruMixin):
     """PRMS atmospheric boundary layer model.
 
     Implementation based on PRMS 5.2.1 with theoretical documentation given in
@@ -157,7 +158,7 @@ class PRMSAtmosphere(Process):
             restart_write_freq=restart_write_freq,
         )
         self.name = "PRMSAtmosphere"
-
+        self._set_active_hrus()
         self._set_inputs(locals())
         self._set_options(locals())
 
@@ -201,6 +202,8 @@ class PRMSAtmosphere(Process):
         self.calculate_potential_et_jh()
         self.calculate_transp()
 
+        self._mask_inactive_hrus()
+
         # JLM todo: delete large variables on self for memory management
         self._calculated = True
 
@@ -224,6 +227,7 @@ class PRMSAtmosphere(Process):
             "tmax_allsnow",
             "tmax_allrain_offset",
             "hru_slope",
+            "hru_type",
             "radj_sppt",
             "radj_wppt",
             "hru_lat",
@@ -994,6 +998,7 @@ class PRMSAtmosphereTranspFrost(PRMSAtmosphere):
             "tmax_allsnow",
             "tmax_allrain_offset",
             "hru_slope",
+            "hru_type",
             "radj_sppt",
             "radj_wppt",
             "hru_lat",

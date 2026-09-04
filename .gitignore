@@ -122,4 +122,7 @@ starfit_minimal/
 # claude code: personal settings stay untracked
 .claude/settings.local.json
 
+# PRMS binaries compiled on demand from prms_src (see pywatershed.utils.compile_prms)
+bin/prms_5.2.1_*
+bin/prms_5.2.1.1_*
 .codegraph/

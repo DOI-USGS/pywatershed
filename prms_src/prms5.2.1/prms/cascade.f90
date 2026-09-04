@@ -666,7 +666,7 @@
         added = 0
         DO i = 1, Nhru
           IF ( Hru_type(i)==INACTIVE ) CYCLE !ignore inactive HRUs
-            IF ( is_hru_on_list(i)==0 ) THEN
+          IF ( is_hru_on_list(i)==0 ) THEN
             goes_on_list = 1
             DO j = 1, up_id_count(i)
               up_hru_id = hrus_up_list(j, i)

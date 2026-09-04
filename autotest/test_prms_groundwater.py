@@ -29,6 +29,13 @@ def control(simulation):
 @pytest.fixture(scope="function")
 def Groundwater(control):
     if (
+        "cascadegw_flag" in control.options.keys()
+        and control.options["cascadegw_flag"]
+    ):
+        # Groundwater cascades are not implemented in pywatershed
+        pytest.skip("cascadegw_flag is active: not implemented in pywatershed")
+
+    if (
         "dprst_flag" in control.options.keys()
         and control.options["dprst_flag"]
     ):

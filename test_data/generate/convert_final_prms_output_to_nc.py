@@ -16,6 +16,8 @@ def final_netcdf_file(control_final_file):
     """Create NetCDF files that depend on multiple other NetCDFs"""
 
     control_file = control_final_file[0]
+    if "make_cbh_only" in control_file.stem:
+        pytest.skip(f"Only generating CBH files with {control_file}")
     final_file = control_final_file[1]
     domain_dir = control_file.parent
     var_name = final_file.name

@@ -41,11 +41,15 @@ from .hydrology.prms_hydraulic_geometry import (
 )
 from .hydrology.prms_runoff import PRMSRunoff
 from .hydrology.prms_runoff_ag import PRMSRunoffAg
+from .hydrology.prms_runoff_cascades_no_dprst import PRMSRunoffCascadesNoDprst
 from .hydrology.prms_runoff_no_dprst import PRMSRunoffNoDprst
 from .hydrology.prms_snow import PRMSSnow
 from .hydrology.prms_soilzone import PRMSSoilzone
 from .hydrology.prms_soilzone_ag import PRMSSoilzoneAg
 from .hydrology.prms_soilzone_ag_obs_et import PRMSSoilzoneAgObsET
+from .hydrology.prms_soilzone_cascades_no_dprst import (
+    PRMSSoilzoneCascadesNoDprst,
+)
 from .hydrology.prms_soilzone_no_dprst import PRMSSoilzoneNoDprst
 from .hydrology.prms_stream_shade import (
     PRMSStreamShadeConstant,
@@ -126,11 +130,13 @@ __all__ = (
     "PRMSHydraulicGeometryWidthOnly",
     "PRMSRunoff",
     "PRMSRunoffAg",
+    "PRMSRunoffCascadesNoDprst",
     "PRMSRunoffNoDprst",
     "PRMSSnow",
     "PRMSSoilzone",
     "PRMSSoilzoneAg",
     "PRMSSoilzoneAgObsET",
+    "PRMSSoilzoneCascadesNoDprst",
     "PRMSSoilzoneNoDprst",
     "PRMSStreamShadeConstant",
     "PRMSStreamShadeDynamic",

@@ -6,6 +6,9 @@ from pywatershed import CsvFile, Soltab
 
 """This module is intended to aid/make consistent conversions of PRMS files"""
 
+# PRMS output names translated to pywatershed variable names
+rename_prms_vars = {"hru_hortn_cascflow": "hru_horton_cascflow"}
+
 
 def convert_csv_to_nc(
     var_name: str,
@@ -36,6 +39,13 @@ def convert_csv_to_nc(
         CsvFile({rename: csv_path}).to_netcdf(nc_path)
 
     assert nc_path.exists()
+
+    if var_name in rename_prms_vars.keys():
+        # the renaming keeps the original name nc file and produces a new one
+        new_var_name = rename_prms_vars[var_name]
+        nc_path = output_dir / f"{new_var_name}.nc"
+        CsvFile({new_var_name: csv_path}).to_netcdf(nc_path)
+        assert nc_path.exists()
 
 
 def convert_soltab_to_nc(

@@ -6,6 +6,7 @@ from utils import assert_or_print
 
 from pywatershed import Control, Parameters, PRMSCanopy
 from pywatershed.parameters import PrmsParameters
+from pywatershed.utils.prms5_file_util import expand_scalar_to_dims
 
 test_ans = {
     "drb_2yr": {
@@ -85,6 +86,62 @@ def test_parameter_init():
     assert_or_print(results, answers)
 
     print("success initializing Parameters object")
+
+
+def test_expand_scalar_to_dims():
+    # A 12-HRU domain: per-HRU and monthly arrays have the same length, so
+    # the declared dimension name must decide how to expand.
+    nhru = 12
+    param_dict = {
+        "nhru": nhru,
+        "nmonth": 12,
+        # scalar -> (nmonth, nhru)
+        "cecn_coef": np.array([5.0]),
+        # monthly -> (nmonth, nhru)
+        "rain_cbh_adj": np.arange(12, dtype=float),
+        # per-HRU, in expand_hru_to_monthly -> (nmonth, nhru)
+        "tmax_adj": np.arange(nhru, dtype=float),
+        # per-HRU, not expandable to monthly -> passed through unchanged
+        "snow_cbh_adj": np.arange(nhru, dtype=float),
+        # already full shape -> unchanged
+        "hru_area": np.arange(nhru, dtype=float),
+    }
+    param_dim_dict = {
+        "nhru": None,
+        "nmonth": None,
+        "cecn_coef": ("scalar",),
+        "rain_cbh_adj": ("nmonth",),
+        "tmax_adj": ("nhru",),
+        "snow_cbh_adj": ("nhru",),
+        "hru_area": ("nhru",),
+    }
+    result, result_dims = expand_scalar_to_dims(
+        dict(param_dict), dict(param_dim_dict)
+    )
+
+    assert result["cecn_coef"].shape == (12, nhru)
+    assert (result["cecn_coef"] == 5.0).all()
+
+    assert result["rain_cbh_adj"].shape == (12, nhru)
+    # month varies along axis 0, constant across HRUs
+    assert (result["rain_cbh_adj"][:, 0] == np.arange(12)).all()
+    assert (result["rain_cbh_adj"][3, :] == 3.0).all()
+
+    assert result["tmax_adj"].shape == (12, nhru)
+    # HRU varies along axis 1, constant across months
+    assert (result["tmax_adj"][0, :] == np.arange(nhru)).all()
+    assert (result["tmax_adj"][:, 3] == 3.0).all()
+
+    # unhandled shape: no error, data untouched
+    assert result["snow_cbh_adj"].shape == (nhru,)
+    assert (result["snow_cbh_adj"] == param_dict["snow_cbh_adj"]).all()
+
+    assert result["hru_area"].shape == (nhru,)
+
+    # dims are reported from metadata in every case
+    for name in ["cecn_coef", "rain_cbh_adj", "tmax_adj", "snow_cbh_adj"]:
+        assert tuple(result_dims[name]) == ("nmonth", "nhru")
+    assert tuple(result_dims["hru_area"]) == ("nhru",)
 
 
 def test_parameter_read(simulation):

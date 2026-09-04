@@ -1,5 +1,7 @@
 control-option: prms-legacy AET_cbh_file
 control-option: prms-legacy ag_frac_dynamic
+control-option: prms-legacy cascade_flag
+control-option: prms-legacy cascadegw_flag
 control-option: prms-legacy dprst_flag
 control-option: prms-legacy dyn_ag_frac_flag
 control-option: prms-legacy dyn_fallfrost_flag
@@ -26,6 +28,8 @@ control-option: prms-legacy var_save_file
 control-option: pws AET_cbh_file
 control-option: pws ag_frac_dynamic
 control-option: pws calc_method
+control-option: pws cascade_flag
+control-option: pws cascadegw_flag
 control-option: pws dprst_flag
 control-option: pws dyn_ag_frac_flag
 control-option: pws dyn_fallfrost_flag
@@ -91,11 +95,13 @@ export: PRMSHydraulicGeometryFull
 export: PRMSHydraulicGeometryWidthOnly
 export: PRMSRunoff
 export: PRMSRunoffAg
+export: PRMSRunoffCascadesNoDprst
 export: PRMSRunoffNoDprst
 export: PRMSSnow
 export: PRMSSoilzone
 export: PRMSSoilzoneAg
 export: PRMSSoilzoneAgObsET
+export: PRMSSoilzoneCascadesNoDprst
 export: PRMSSoilzoneNoDprst
 export: PRMSSolarGeometry
 export: PRMSStreamShadeConstant
@@ -129,7 +135,7 @@ func: prms_channel_flow_graph_to_model_dict(model_dict, prms_channel_dis, prms_c
 func: prms_segment_lateral_inflow_components_to_netcdf(control, parameters, input_dir, nc_out_file_path, output_sum=False)
 init: Adapter(self, variable)
 init: AdapterNetcdf(self, fname, variable, control, load_n_time_batches=1)
-init: Budget(self, control, inputs, outputs, storage_changes, exchanges=None, init_accumulations=None, accum_start_time=None, units=None, time_unit='D', description=None, rtol=1e-05, atol=1e-05, basis='unit', imbalance_fatal=False, ignore_nans=False, unit_desc='', verbose=True)
+init: Budget(self, control, inputs, outputs, storage_changes, exchanges=None, init_accumulations=None, accum_start_time=None, units=None, time_unit='D', description=None, rtol=1e-05, atol=1e-05, basis='unit', imbalance_fatal=False, ignore_nans=False, active_mask=False, unit_desc='', verbose=True)
 init: ColorBrewer(self)
 init: Control(self, start_time, end_time, time_step, init_time=None, options=None, only_warn_invalid=False)
 init: ControlVariables(self, control_dict)
@@ -164,11 +170,13 @@ init: PRMSHydraulicGeometryFull(self, control, discretization, parameters, seg_o
 init: PRMSHydraulicGeometryWidthOnly(self, control, discretization, parameters, seg_outflow, input_aliases=None, verbose=False)
 init: PRMSRunoff(self, control, discretization, parameters, soil_lower_prev, soil_rechr_prev, net_ppt, net_rain, net_snow, potet, snowmelt, snow_evap, pkwater_equiv, pptmix_nopack, snowcov_area, through_rain, hru_intcpevap, intcp_changeover, dprst_flag=None, intcp_changeover_in_net_rain=False, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSRunoffAg(self, control, discretization, parameters, soil_lower_prev, soil_rechr_prev, net_ppt, net_rain, net_snow, potet, snowmelt, snow_evap, pkwater_equiv, pptmix_nopack, snowcov_area, through_rain, hru_intcpevap, intcp_changeover, ag_soil_moist_prev, ag_soil_rechr_prev, ag_frac, dprst_flag=None, intcp_changeover_in_net_rain=None, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
+init: PRMSRunoffCascadesNoDprst(self, control, discretization, parameters, soil_lower_prev, soil_rechr_prev, net_ppt, net_rain, net_snow, potet, snowmelt, snow_evap, pkwater_equiv, pptmix_nopack, snowcov_area, through_rain, hru_intcpevap, intcp_changeover, intcp_changeover_in_net_rain=False, imbalance_behavior='defer', calc_method=None, verbose=None)
 init: PRMSRunoffNoDprst(self, control, discretization, parameters, soil_lower_prev, soil_rechr_prev, net_ppt, net_rain, net_snow, potet, snowmelt, snow_evap, pkwater_equiv, pptmix_nopack, snowcov_area, through_rain, hru_intcpevap, intcp_changeover, intcp_changeover_in_net_rain=False, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSSnow(self, control, discretization, parameters, orad_hru, soltab_horad_potsw, swrad, hru_intcpevap, hru_ppt, potet, pptmix, prmx, tavgc, tmaxc, tminc, net_ppt, net_rain, net_snow, transp_on, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
-init: PRMSSoilzone(self, control, discretization, parameters, dprst_evap_hru, dprst_seep_hru, hru_impervevap, hru_intcpevap, infil_hru, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, dprst_flag=None, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
+init: PRMSSoilzone(self, control, discretization, parameters, dprst_evap_hru, dprst_seep_hru, hru_impervevap, hru_intcpevap, infil_hru, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, stream_seg_in=None, dprst_flag=None, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSSoilzoneAg(self, control, discretization, parameters, dprst_evap_hru, dprst_seep_hru, hru_impervevap, hru_intcpevap, infil, infil_ag, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, ag_frac, dprst_flag=None, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSSoilzoneAgObsET(self, control, discretization, parameters, dprst_evap_hru, dprst_seep_hru, hru_impervevap, hru_intcpevap, infil, infil_ag, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, ag_frac, aet_observed, dprst_flag=None, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
+init: PRMSSoilzoneCascadesNoDprst(self, control, discretization, parameters, hru_impervevap, hru_intcpevap, infil_hru, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, stream_seg_in, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', verbose=None)
 init: PRMSSoilzoneNoDprst(self, control, discretization, parameters, hru_impervevap, hru_intcpevap, infil_hru, sroff, sroff_vol, potet, transp_on, snow_evap, snowcov_area, imbalance_behavior='defer', calc_method=None, adjust_parameters='warn', input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSSolarGeometry(self, control, discretization, parameters, input_aliases=None, verbose=False, from_prms_file=None, from_nc_files_dir=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSStreamShadeConstant(self, parameters, discretization=None)
@@ -778,6 +786,7 @@ meta-var: hru_et_yr type=float64 units=inches
 meta-var: hru_frac_perv type=float64 units=decimal fraction
 meta-var: hru_gw_cascadeflow type=float64 units=inches
 meta-var: hru_hortn_cascflow type=float64 units=inches
+meta-var: hru_horton_cascflow type=float64 units=inches
 meta-var: hru_imperv type=float64 units=acres
 meta-var: hru_impervevap type=float64 units=inches
 meta-var: hru_impervstor type=float64 units=inches
@@ -1029,6 +1038,7 @@ meta-var: ssres_flow type=float64 units=inches
 meta-var: ssres_flow_vol type=float64 units=cubicfeet
 meta-var: ssres_in type=float64 units=inches
 meta-var: ssres_stor type=float64 units=inches
+meta-var: stream_seg_in type=float64 units=cfs
 meta-var: streamflow_cfs type=float64 units=cfs
 meta-var: streamflow_cms type=float64 units=cms
 meta-var: strm_seg_in type=float64 units=cfs
@@ -1138,19 +1148,19 @@ set: HruNodeFlowExchange.get_variables list: inflows inflows_vol sinks sinks_vol
 set: PRMSAtmosphere.get_dimensions tuple: ndoy nhru nmonth ntime
 set: PRMSAtmosphere.get_init_values dict-keys: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSAtmosphere.get_inputs tuple: prcp soltab_horad_potsw soltab_potsw tmax tmin
-set: PRMSAtmosphere.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj transp_beg transp_end transp_tmax
+set: PRMSAtmosphere.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope hru_type jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj transp_beg transp_end transp_tmax
 set: PRMSAtmosphere.get_restart_variables list: tmax_sum transp_on
 set: PRMSAtmosphere.get_variables list: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSAtmosphereTranspFrost.get_dimensions tuple: ndoy nhru nmonth ntime
 set: PRMSAtmosphereTranspFrost.get_init_values dict-keys: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSAtmosphereTranspFrost.get_inputs tuple: prcp soltab_horad_potsw soltab_potsw tmax tmin
-set: PRMSAtmosphereTranspFrost.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy fall_frost hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj spring_frost temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj
+set: PRMSAtmosphereTranspFrost.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy fall_frost hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope hru_type jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj spring_frost temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj
 set: PRMSAtmosphereTranspFrost.get_restart_variables list: tmax_sum transp_on
 set: PRMSAtmosphereTranspFrost.get_variables list: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSAtmosphereTranspFrostDynamic.get_dimensions tuple: ndoy nhru nmonth ntime
 set: PRMSAtmosphereTranspFrostDynamic.get_init_values dict-keys: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSAtmosphereTranspFrostDynamic.get_inputs tuple: prcp soltab_horad_potsw soltab_potsw tmax tmin
-set: PRMSAtmosphereTranspFrostDynamic.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy fall_frost hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj spring_frost temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj
+set: PRMSAtmosphereTranspFrostDynamic.get_parameters tuple: adjmix_rain dday_intcp dday_intcp dday_slope dday_slope doy fall_frost hru_area hru_area hru_aspect hru_lat hru_lat hru_slope hru_slope hru_type jh_coef jh_coef_hru ppt_rad_adj ppt_rad_adj radadj_intcp radadj_intcp radadj_slope radadj_slope radj_sppt radj_sppt radj_wppt radj_wppt radmax radmax rain_cbh_adj snow_cbh_adj spring_frost temp_units tmax_allrain_offset tmax_allrain_offset tmax_allrain_offset tmax_allsnow tmax_allsnow tmax_allsnow tmax_cbh_adj tmax_index tmax_index tmin_cbh_adj
 set: PRMSAtmosphereTranspFrostDynamic.get_restart_variables list: tmax_sum transp_on
 set: PRMSAtmosphereTranspFrostDynamic.get_variables list: hru_ppt hru_rain hru_snow orad_hru potet pptmix prmx swrad tavgc tmax_sum tmaxc tmaxf tminc tminf transp_on
 set: PRMSCanopy.get_dimensions tuple: nhru
@@ -1162,7 +1172,7 @@ set: PRMSCanopy.get_inputs tuple: hru_ppt hru_rain hru_snow pkwater_ante potet p
 set: PRMSCanopy.get_mass_budget_terms inputs: hru_rain hru_snow
 set: PRMSCanopy.get_mass_budget_terms outputs: hru_intcpevap intcp_changeover net_rain net_snow
 set: PRMSCanopy.get_mass_budget_terms storage_changes: hru_intcpstor_change
-set: PRMSCanopy.get_parameters tuple: cov_type covden_sum covden_win potet_sublim snow_intcp srain_intcp wrain_intcp
+set: PRMSCanopy.get_parameters tuple: cov_type covden_sum covden_win hru_type potet_sublim snow_intcp srain_intcp wrain_intcp
 set: PRMSCanopy.get_restart_variables list: hru_intcpstor intcp_stor intcp_transp_on
 set: PRMSCanopy.get_variables list: hru_intcpevap hru_intcpstor hru_intcpstor_change hru_intcpstor_old intcp_changeover intcp_evap intcp_form intcp_stor intcp_transp_on net_ppt net_rain net_snow
 set: PRMSChannel.get_dimensions tuple: nhru nsegment
@@ -1194,7 +1204,7 @@ set: PRMSGroundwater.get_inputs tuple: dprst_seep_hru soil_to_gw ssr_to_gw
 set: PRMSGroundwater.get_mass_budget_terms inputs: dprst_seep_hru soil_to_gw ssr_to_gw
 set: PRMSGroundwater.get_mass_budget_terms outputs: gwres_flow
 set: PRMSGroundwater.get_mass_budget_terms storage_changes: gwres_stor_change
-set: PRMSGroundwater.get_parameters tuple: gwflow_coef gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf
+set: PRMSGroundwater.get_parameters tuple: gwflow_coef gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf hru_type
 set: PRMSGroundwater.get_restart_variables list: gwres_stor
 set: PRMSGroundwater.get_variables list: gwres_flow gwres_flow_vol gwres_sink gwres_stor gwres_stor_change gwres_stor_old
 set: PRMSGroundwaterNoDprst.get_dimensions tuple: nhru
@@ -1206,7 +1216,7 @@ set: PRMSGroundwaterNoDprst.get_inputs tuple: soil_to_gw ssr_to_gw
 set: PRMSGroundwaterNoDprst.get_mass_budget_terms inputs: soil_to_gw ssr_to_gw
 set: PRMSGroundwaterNoDprst.get_mass_budget_terms outputs: gwres_flow
 set: PRMSGroundwaterNoDprst.get_mass_budget_terms storage_changes: gwres_stor_change
-set: PRMSGroundwaterNoDprst.get_parameters tuple: gwflow_coef gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf
+set: PRMSGroundwaterNoDprst.get_parameters tuple: gwflow_coef gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf hru_type
 set: PRMSGroundwaterNoDprst.get_restart_variables list: gwres_stor
 set: PRMSGroundwaterNoDprst.get_variables list: gwres_flow gwres_flow_vol gwres_sink gwres_stor gwres_stor_change gwres_stor_old
 set: PRMSHydraulicGeometryFull.get_dimensions tuple: nsegment
@@ -1245,6 +1255,18 @@ set: PRMSRunoffAg.get_mass_budget_terms storage_changes: dprst_stor_hru_change h
 set: PRMSRunoffAg.get_parameters tuple: ag_soil_moist_max ag_soil_rechr_max_frac carea_max dprst_depth_avg dprst_et_coef dprst_flow_coef dprst_frac dprst_frac_init dprst_frac_open dprst_seep_rate_clos dprst_seep_rate_open hru_area hru_in_to_cf hru_percent_imperv hru_type imperv_stor_max op_flow_thres sat_threshold smidx_coef smidx_exp snowinfil_max soil_moist_max sro_to_dprst_imperv sro_to_dprst_perv va_clos_exp va_open_exp
 set: PRMSRunoffAg.get_restart_variables list: dprst_area_clos dprst_area_open dprst_stor_hru dprst_vol_clos dprst_vol_open dprst_vol_thres_open hru_impervstor imperv_stor
 set: PRMSRunoffAg.get_variables list: contrib_fraction dprst_area_clos dprst_area_clos_max dprst_area_open dprst_area_open_max dprst_evap_hru dprst_insroff_hru dprst_seep_hru dprst_sroff_hru dprst_stor_hru dprst_stor_hru_change dprst_stor_hru_old dprst_vol_clos dprst_vol_clos_frac dprst_vol_frac dprst_vol_open dprst_vol_open_frac dprst_vol_thres_open hru_impervevap hru_impervstor hru_impervstor_change hru_impervstor_old hru_sroff_ag hru_sroffi hru_sroffp imperv_evap imperv_stor infil infil_ag infil_ag_hru infil_hru infil_perv_hru intcp_changeover_budget sroff sroff_vol
+set: PRMSRunoffCascadesNoDprst.get_dimensions tuple: nhru nsegment
+set: PRMSRunoffCascadesNoDprst.get_energy_budget_terms inputs: 
+set: PRMSRunoffCascadesNoDprst.get_energy_budget_terms outputs: 
+set: PRMSRunoffCascadesNoDprst.get_energy_budget_terms storage_changes: 
+set: PRMSRunoffCascadesNoDprst.get_init_values dict-keys: contrib_fraction hortonian_flow hru_horton_cascflow hru_impervevap hru_impervstor hru_impervstor_change hru_impervstor_old hru_sroffi hru_sroffp imperv_evap imperv_stor infil infil_hru sroff sroff_vol stream_seg_in upslope_hortonian
+set: PRMSRunoffCascadesNoDprst.get_inputs tuple: hru_intcpevap intcp_changeover net_ppt net_rain net_snow pkwater_equiv potet pptmix_nopack snow_evap snowcov_area snowmelt soil_lower_prev soil_rechr_prev through_rain
+set: PRMSRunoffCascadesNoDprst.get_mass_budget_terms inputs: intcp_changeover snowmelt through_rain upslope_hortonian
+set: PRMSRunoffCascadesNoDprst.get_mass_budget_terms outputs: hortonian_flow hru_horton_cascflow hru_impervevap infil_hru
+set: PRMSRunoffCascadesNoDprst.get_mass_budget_terms storage_changes: hru_impervstor_change
+set: PRMSRunoffCascadesNoDprst.get_parameters tuple: carea_max cascade_area hru_area hru_down hru_down_frac hru_down_fracwt hru_in_to_cf hru_percent_imperv hru_route_order hru_type imperv_stor_max ncascade_hru nsegment_dum smidx_coef smidx_exp snowinfil_max soil_moist_max
+set: PRMSRunoffCascadesNoDprst.get_restart_variables list: dprst_area_clos dprst_area_open dprst_stor_hru dprst_vol_clos dprst_vol_open dprst_vol_thres_open hru_impervstor imperv_stor
+set: PRMSRunoffCascadesNoDprst.get_variables list: contrib_fraction hortonian_flow hru_horton_cascflow hru_impervevap hru_impervstor hru_impervstor_change hru_impervstor_old hru_sroffi hru_sroffp imperv_evap imperv_stor infil infil_hru sroff sroff_vol stream_seg_in upslope_hortonian
 set: PRMSRunoffNoDprst.get_dimensions tuple: nhru
 set: PRMSRunoffNoDprst.get_energy_budget_terms inputs: 
 set: PRMSRunoffNoDprst.get_energy_budget_terms outputs: 
@@ -1305,6 +1327,18 @@ set: PRMSSoilzoneAgObsET.get_mass_budget_terms storage_changes: ag_soil_lower_ch
 set: PRMSSoilzoneAgObsET.get_parameters tuple: ag_cov_type ag_covden_sum ag_covden_win ag_soil2gw_max ag_soil_moist_init_frac ag_soil_moist_max ag_soil_rechr_init_frac ag_soil_rechr_max_frac ag_soil_type ag_soilwater_deficit_min cov_type dprst_frac fastcoef_lin fastcoef_sq hru_area hru_in_to_cf hru_percent_imperv hru_type max_soilzone_ag_iter pref_flow_den pref_flow_infil_frac sat_threshold slowcoef_lin slowcoef_sq soil2gw_max soil_moist_init_frac soil_moist_max soil_rechr_init_frac soil_rechr_max_frac soil_type soilzone_aet_converge ssr2gw_exp ssr2gw_rate ssstor_init_frac
 set: PRMSSoilzoneAgObsET.get_restart_variables list: ag_soil_moist ag_soil_rechr slow_stor soil_lower soil_moist soil_rechr
 set: PRMSSoilzoneAgObsET.get_variables list: AET_external ag_actet ag_aet_external_vol ag_cap_infil_tot ag_hortonian ag_infil_hru ag_irrigation_add ag_irrigation_add_vol ag_irrigation_hru_source ag_potet_lower ag_potet_rechr ag_soil_lower ag_soil_lower_change ag_soil_lower_change_hru ag_soil_lower_stor_max ag_soil_moist ag_soil_moist_change ag_soil_moist_change_hru ag_soil_moist_prev ag_soil_moist_redistribution ag_soil_rechr ag_soil_rechr_change ag_soil_rechr_change_hru ag_soil_rechr_max ag_soil_rechr_prev ag_soil_rechr_redistribution ag_soil_saturated ag_soil_to_gvr ag_soil_to_gw ag_soilwater_deficit cap_infil_tot cap_waterin dunnian_flow hru_actet hru_ag_actet iter_count iter_end_status perv_actet perv_actet_hru perv_infil_hru perv_soil_to_gvr perv_soil_to_gw potet_lower potet_rechr pref_flow pref_flow_in pref_flow_infil pref_flow_max pref_flow_stor pref_flow_stor_change pref_flow_stor_prev pref_flow_thrsh recharge slow_flow slow_stor slow_stor_change slow_stor_prev slow_stor_redistribution soil_lower soil_lower_change soil_lower_change_hru soil_lower_max soil_lower_prev soil_lower_ratio soil_lower_redistribution soil_moist soil_moist_tot soil_rechr soil_rechr_change soil_rechr_change_hru soil_rechr_prev soil_rechr_redistribution soil_saturated soil_to_gw soil_to_ssr soil_zone_max ssr_to_gw ssres_flow ssres_flow_vol ssres_in ssres_stor swale_actet unused_ag_et unused_potet
+set: PRMSSoilzoneCascadesNoDprst.get_dimensions tuple: nhru nsegment
+set: PRMSSoilzoneCascadesNoDprst.get_energy_budget_terms inputs: 
+set: PRMSSoilzoneCascadesNoDprst.get_energy_budget_terms outputs: 
+set: PRMSSoilzoneCascadesNoDprst.get_energy_budget_terms storage_changes: 
+set: PRMSSoilzoneCascadesNoDprst.get_init_values dict-keys: cap_infil_tot cap_waterin dunnian_flow hru_actet hru_sz_cascadeflow perv_actet perv_actet_hru potet_lower potet_rechr pref_flow pref_flow_in pref_flow_infil pref_flow_max pref_flow_stor pref_flow_stor_change pref_flow_stor_prev pref_flow_thrsh recharge slow_flow slow_stor slow_stor_change slow_stor_prev soil_lower soil_lower_change soil_lower_change_hru soil_lower_max soil_lower_prev soil_lower_ratio soil_moist soil_moist_tot soil_rechr soil_rechr_change soil_rechr_change_hru soil_rechr_prev soil_to_gw soil_to_ssr soil_zone_max ssr_to_gw ssres_flow ssres_flow_vol ssres_in ssres_stor swale_actet unused_potet upslope_dunnianflow upslope_interflow
+set: PRMSSoilzoneCascadesNoDprst.get_inputs tuple: hru_impervevap hru_intcpevap infil_hru potet snow_evap snowcov_area sroff sroff_vol stream_seg_in transp_on
+set: PRMSSoilzoneCascadesNoDprst.get_mass_budget_terms inputs: infil_hru upslope_dunnianflow upslope_interflow
+set: PRMSSoilzoneCascadesNoDprst.get_mass_budget_terms outputs: dunnian_flow hru_sz_cascadeflow perv_actet_hru pref_flow slow_flow soil_to_gw ssr_to_gw
+set: PRMSSoilzoneCascadesNoDprst.get_mass_budget_terms storage_changes: pref_flow_stor_change slow_stor_change soil_lower_change_hru soil_rechr_change_hru
+set: PRMSSoilzoneCascadesNoDprst.get_parameters tuple: cascade_area cov_type fastcoef_lin fastcoef_sq hru_area hru_down hru_down_frac hru_down_fracwt hru_in_to_cf hru_percent_imperv hru_route_order hru_type ncascade_hru nsegment_dum pref_flow_den pref_flow_infil_frac sat_threshold slowcoef_lin slowcoef_sq soil2gw_max soil_moist_init_frac soil_moist_max soil_rechr_init_frac soil_rechr_max_frac soil_type ssr2gw_exp ssr2gw_rate ssstor_init_frac
+set: PRMSSoilzoneCascadesNoDprst.get_restart_variables tuple: 
+set: PRMSSoilzoneCascadesNoDprst.get_variables list: cap_infil_tot cap_waterin dunnian_flow hru_actet hru_sz_cascadeflow perv_actet perv_actet_hru potet_lower potet_rechr pref_flow pref_flow_in pref_flow_infil pref_flow_max pref_flow_stor pref_flow_stor_change pref_flow_stor_prev pref_flow_thrsh recharge slow_flow slow_stor slow_stor_change slow_stor_prev soil_lower soil_lower_change soil_lower_change_hru soil_lower_max soil_lower_prev soil_lower_ratio soil_moist soil_moist_tot soil_rechr soil_rechr_change soil_rechr_change_hru soil_rechr_prev soil_to_gw soil_to_ssr soil_zone_max ssr_to_gw ssres_flow ssres_flow_vol ssres_in ssres_stor swale_actet unused_potet upslope_dunnianflow upslope_interflow
 set: PRMSSoilzoneNoDprst.get_dimensions tuple: nhru
 set: PRMSSoilzoneNoDprst.get_energy_budget_terms inputs: 
 set: PRMSSoilzoneNoDprst.get_energy_budget_terms outputs: 
@@ -1320,7 +1354,7 @@ set: PRMSSoilzoneNoDprst.get_variables list: cap_infil_tot cap_waterin dunnian_f
 set: PRMSSolarGeometry.get_dimensions tuple: ndoy nhru
 set: PRMSSolarGeometry.get_init_values dict-keys: soltab_horad_potsw soltab_potsw soltab_sunhrs
 set: PRMSSolarGeometry.get_inputs tuple: 
-set: PRMSSolarGeometry.get_parameters tuple: doy hru_area hru_aspect hru_lat hru_slope radj_sppt radj_wppt
+set: PRMSSolarGeometry.get_parameters tuple: doy hru_area hru_aspect hru_lat hru_slope hru_type radj_sppt radj_wppt
 set: PRMSSolarGeometry.get_restart_variables list: 
 set: PRMSSolarGeometry.get_variables tuple: soltab_horad_potsw soltab_potsw soltab_sunhrs
 set: PRMSStreamShadeConstant.get_parameters tuple: seg_lat segshade_sum segshade_win

@@ -1,0 +1,55 @@
+control: sagehen_gridded_cascades_control.yaml
+
+dis_hru: parameters_dis_hru.nc
+
+dis_both: parameters_dis_both.nc
+
+solargeometry:
+  class: PRMSSolarGeometry
+  parameters: parameters_PRMSSolarGeometry.nc
+  dis: dis_hru
+
+atmosphere:
+  class: PRMSAtmosphere
+  parameters: parameters_PRMSAtmosphere.nc
+  dis: dis_hru
+
+canopy:
+  class: PRMSCanopy
+  parameters: parameters_PRMSCanopy.nc
+  dis: dis_hru
+
+snow:
+  class: PRMSSnow
+  parameters: parameters_PRMSSnow.nc
+  dis: dis_hru
+
+runoff:
+  class: PRMSRunoffCascadesNoDprst
+  parameters: parameters_PRMSRunoffCascadesNoDprst.nc
+  dis: dis_hru
+
+soilzone:
+  class: PRMSSoilzoneCascadesNoDprst
+  parameters: parameters_PRMSSoilzoneCascadesNoDprst.nc
+  dis: dis_hru
+
+groundwater:
+  class: PRMSGroundwaterNoDprst
+  parameters: parameters_PRMSGroundwater.nc
+  dis: dis_hru
+
+channel:
+  class: PRMSChannel
+  parameters: parameters_PRMSChannel.nc
+  dis: dis_both
+
+model_order:
+  - solargeometry
+  - atmosphere
+  - canopy
+  - snow
+  - runoff
+  - soilzone
+  - groundwater
+  - channel

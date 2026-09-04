@@ -191,6 +191,15 @@ class Parameters(DatasetDict):
         else:
             return {kk: self.dims[kk] for kk in keys}
 
+    @classmethod
+    def from_dataset_dict(cls, dataset_dict: DatasetDict) -> "Parameters":
+        """A Parameters object from a DatasetDict.
+
+        Args:
+          dataset_dict: a DatasetDict to transform into parameters.
+        """
+        return cls(**dataset_dict.data)
+
     def to_xr_ds(self) -> xr.Dataset:
         """Export Parameters to an xarray dataset"""
         return dd_to_xr_ds(_set_dict_read_write(self.data))
