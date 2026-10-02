@@ -11,6 +11,8 @@
     - [Drop the netCDF4 ndarray.shape warning filter](#drop-the-netcdf4-ndarrayshape-warning-filter)
     - [Drop the gfortran <16 ceiling (conda-forge win-64 link failure)](#drop-the-gfortran-16-ceiling-conda-forge-win-64-link-failure)
     - [PR #412 follow-ups: pre-commit notebook coverage, holoviews floor](#pr-412-follow-ups-pre-commit-notebook-coverage-holoviews-floor)
+    - [fluvial-particle: 1D network particle solver consuming the network hydraulics export](#fluvial-particle-1d-network-particle-solver-consuming-the-network-hydraulics-export)
+    - [NWM transformer to the network hydraulics schema](#nwm-transformer-to-the-network-hydraulics-schema)
     - [Decide the fate of preprocess_gridded_params before 4.0](#decide-the-fate-of-preprocess_gridded_params-before-40)
     - [Metadata for derived cascade and active-HRU parameters](#metadata-for-derived-cascade-and-active-hru-parameters)
     - [PRMSChannel ignores stream_seg_in: cascaded flow never reaches the channel](#prmschannel-ignores-stream_seg_in-cascaded-flow-never-reaches-the-channel)
@@ -234,6 +236,28 @@ check it), **Action** (what to do once unblocked), and optional
 - **Notes:** the pre-commit hook only ever sees *staged* files while CI
   runs `ruff check .` over the whole tree. That gap is what let #412's
   notebook errors reach CI in the first place.
+
+### fluvial-particle: 1D network particle solver consuming the network hydraulics export
+
+- **Blocked on:** this repo's `export_network_hydraulics` PR merged to
+  `develop` (check: `pywatershed/utils/network_hydraulics.py` exists on
+  `develop` via the GitHub contents API).
+- **Action:** in the fluvial-particle repository, write the solver
+  spec (passive tracer first; reach index + distance-from-upstream-end
+  convention documented in the export's `conventions_note` attribute) and
+  implement a file-backed hydraulics provider for the export schema in
+  `docs/superpowers/specs/2026-09-11-network-hydraulics-export-design.md`.
+- **Notes:** keep the export variable names as the future BMI vocabulary.
+
+### NWM transformer to the network hydraulics schema
+
+- **Blocked on:** nothing external; follow-on to the export PR.
+- **Action:** add a transformer from NWM `RouteLink_CONUS.nc` plus
+  CHRTOUT (`streamflow`, `velocity`, `q_lateral`) to the same schema:
+  depth by inverting Manning for the trapezoid (`BtmWdth`, `ChSlp`,
+  `So`, `n`), width = `BtmWdth + 2*ChSlp*depth`, `flow_in = streamflow -
+  q_lateral`, outlets where `to == 0`, planform from NHDPlus v2
+  flowlines by COMID. Sources and field lists are in the spec above.
 
 ### Decide the fate of preprocess_gridded_params before 4.0
 

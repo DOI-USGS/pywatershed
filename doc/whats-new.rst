@@ -25,6 +25,31 @@ New Features
   additions to the v3.0.0 Breaking Changes section below record five changes
   it documents that were found undocumented.
   (:pull:`416`) By `James McCreight <https://github.com/jmccreight>`_.
+- Network hydraulics for 1D river-network transport.
+  :func:`~pywatershed.utils.at_a_station_hydraulic_geometry` derives
+  per-segment ``width_alpha``, ``width_m``, ``depth_alpha`` and ``depth_m``
+  from the bankfull ``seg_width`` and ``seg_depth`` (Manning bankfull
+  discharge, Leopold-Maddock at-a-station exponents), replacing the
+  one-size-fits-all PRMS default depth relation.
+  :func:`~pywatershed.utils.export_network_hydraulics` writes a
+  model-agnostic NetCDF of reach topology, optional planform polylines,
+  and per-reach time series of flow, velocity, depth, width, shear
+  velocity and residence time in SI units, consumed by the particle
+  tracker in the ``fluvial-particle`` package. When a segment shapefile
+  is supplied, it must use a projected CRS in meters, raising if it does
+  not and warning if the shapefile carries no CRS at all. Helpers
+  :func:`~pywatershed.utils.shear_velocity` and
+  :func:`~pywatershed.utils.calculate_seg_mid_elevations` (the latter
+  refactored out of :class:`MmrToMf6Dfw`, behavior unchanged; its debug
+  ``check=True`` path, previously non-functional, now verifies the interior
+  and outlet elevation invariants and raises on failure) are public. The
+  exporter validates its inputs up front: required parameters, ``tosegment``
+  range and cycles, each run file's ``nhm_seg`` order, shared time axis and
+  ``units`` against the pywatershed metadata, and the requested time
+  selection.
+  New example notebook ``examples/02a_network_hydraulics_export.ipynb``
+  demonstrates both on the Delaware River Basin.
+  (:pull:`420`) By `Richard McDonald <https://github.com/rmcd-mscb>`_.
 - HRU cascading flow (Hortonian surface runoff and soilzone interflow /
   Dunnian flow) following PRMS ``cascade_flag=1`` with
   ``cascadegw_flag=0``: new process classes

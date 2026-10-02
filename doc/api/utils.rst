@@ -10,9 +10,12 @@ Utils
 
     ControlVariables
     MmrToMf6Dfw
+    utils.at_a_station_hydraulic_geometry
+    utils.calculate_seg_mid_elevations
     utils.cbh_file_to_netcdf
     utils.compile_prms
     utils.DomainSubset
+    utils.export_network_hydraulics
     utils.get_or_compile_prms_exe
     utils.get_prms_exe_name
     utils.get_prms_exe_path
@@ -20,3 +23,4 @@ Utils
     utils.netcdf_utils.subset_xr
     utils.preprocess_cascades.preprocess_cascade_params
     utils.preprocess_gridded.preprocess_gridded_params
+    utils.shear_velocity

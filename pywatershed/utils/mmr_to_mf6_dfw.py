@@ -8,6 +8,7 @@ from pywatershed import Control, meta
 
 from ..constants import fileish, zero
 from ..parameters import PrmsParameters
+from .network_hydraulics import calculate_seg_mid_elevations
 from .optional_import import import_optional_dependency
 
 flopy = import_optional_dependency("flopy", errors="ignore")
@@ -805,112 +806,39 @@ class MmrToMf6Dfw:
         self._chd = flopy.mf6.ModflowChfchd(self._chf, **self._chd_options)
 
     def _calculate_seg_mid_elevations(self, check=False):
-        nseg = self._nsegment
-        parameters = self.parameters.parameters
-
-        # the rise of the reach
-        seg_dy = parameters["seg_slope"] * parameters["seg_length"]
-        # elevation at upstream end of each reach
-        seg_y = seg_dy * np.nan
-
-        # all 1-based indexers for fortran
-        tosegment0 = parameters["tosegment"] - 1  # move to zero-based indexing
-        is_outflow = -1  # indicates outflow in zero based
-        hru_seg = parameters["hru_segment"] - 1
-
-        # not an indexer
-        hru_elev = parameters["hru_elev"]
-
-        # We want the elevation at middle of the segment
-        # seg_dy is the total rise (y) of each segment.
-        # so the elevation at the middle of each segment is:
-        # seg_y_mid[ss] = sum(seg_dy[segs_downstream]) + seg_dy[ss] / 2
-
-        # probably best to solve
-        # seg_y[ss] = sum(seg_dy[segs_downstream]) + seg_dy[ss]
-        # and then solve
-        # seg_y_mid = seg_y - seg_dy/2
-        # because we want to leverage already calculated segments for
-        # efficiency
-
-        # for each segment,
-        # find its first downstream reach already solved or the outlet:
-        # start_ind
-        # this gives the starting datum as: start_seg_y[start_ind] or zero
-        # (outlet).
-        #  go from outlet back to segment, solving all seg_y
-
-        self._outlet_chds = {}
-        for ss in range(nseg):
-            already_solved = ~np.isnan(seg_y[ss])
-            if already_solved:
-                continue
-            segment_ind = ss
-            downstream_seg_inds = []
-            while not already_solved and segment_ind != is_outflow:
-                # segment ind only gets added if it is NOT already solved
-                downstream_seg_inds += [segment_ind]
-                # advance downstream
-                segment_ind = tosegment0[segment_ind]
-                # check if solved
-                already_solved = ~np.isnan(seg_y[segment_ind])
-
-            _ = downstream_seg_inds.reverse()  # reverses in-place
-
-            for ds_seg_ind in downstream_seg_inds:
-                my_downstream_ind = tosegment0[ds_seg_ind]
-                if my_downstream_ind == is_outflow:
-                    # Use the associated hru elevation (minimum if multiple)
-                    # as the height of the outlet.
-                    # not a great assumption, but better than nothing.
-                    # Also save these outflow elevations to specify a
-                    # constant head boundary to use later
-                    outlet_hrus = np.where(hru_seg == ds_seg_ind)
-                    outlet_elev = hru_elev[outlet_hrus].min()
-                    seg_y[ds_seg_ind] = seg_dy[ds_seg_ind] + outlet_elev
-
-                    # TODO: JLM REVISIT
-                    self._outlet_chds[ds_seg_ind] = (
-                        1.0 + seg_y[ds_seg_ind] - (seg_dy[ds_seg_ind] / 2)
-                    )
-
-                else:
-                    seg_y[ds_seg_ind] = (
-                        seg_dy[ds_seg_ind] + seg_y[my_downstream_ind]
-                    )
-
-        # check?
-        # Compare highest segment elevation and highest HRU elevation
-        # print(
-        #     f"{domain_name}:\n"
-        #     "seg_y.max() / parameters['hru_elev'].max() = "
-        #     f"{seg_y.max()} / {parameters['hru_elev'].max()} = "
-        #     f"{seg_y.max() / parameters['hru_elev'].max()}"
-        # )
-        # drb_2yr:
-        # seg_y.max() / parameters['hru_elev'].max() = 1141.3 / 932.0 = 1.225
-        # ucb_2yr:
-        # seg_y.max() / parameters['hru_elev'].max() = 3019.86 / 3804.0 = 0.794
-        # could correlate hru_to_seg ... ?
-
-        # check going downstream that all differences current - downstream are
-        # seg_dy
+        mid, outlet_mid = calculate_seg_mid_elevations(self.parameters)
+        # constant head at each outlet: 1 m above the midpoint elevation
+        self._outlet_chds = {kk: 1.0 + vv for kk, vv in outlet_mid.items()}
         if check:
-            for ss in range(nseg):
-                my_downstream_ind = tosegment0[ss]
-                if my_downstream_ind == is_outflow:
-                    assert (
-                        abs(seg_y[ss] - seg_dy[ss] - self._outlet_chds[ss])
-                        < 1.0e-7
+            params = self.parameters.parameters
+            seg_dy = params["seg_slope"] * params["seg_length"]
+            tosegment0 = params["tosegment"] - 1
+            hru_seg0 = params["hru_segment"] - 1
+            hru_elev = params["hru_elev"]
+            for ss in range(len(seg_dy)):
+                down = tosegment0[ss]
+                if down == -1:
+                    # an outlet's downstream end is the lowest elevation
+                    # of the HRUs draining to it
+                    down_end = mid[ss] - seg_dy[ss] / 2
+                    outlet_elev = hru_elev[np.where(hru_seg0 == ss)].min()
+                    if abs(down_end - outlet_elev) >= 1.0e-7:
+                        raise ValueError(
+                            f"Outlet segment {ss} downstream elevation "
+                            f"{down_end} does not equal the minimum "
+                            f"elevation {outlet_elev} of its HRUs"
+                        )
+                    continue
+                # upstream end of ss equals upstream end of down + rise
+                up_ss = mid[ss] + seg_dy[ss] / 2
+                up_down = mid[down] + seg_dy[down] / 2
+                if abs((up_ss - up_down) - seg_dy[ss]) >= 1.0e-7:
+                    raise ValueError(
+                        f"Segment {ss} upstream elevation {up_ss} is not "
+                        f"its rise {seg_dy[ss]} above the upstream "
+                        f"elevation {up_down} of downstream segment {down}"
                     )
-                    # assert abs(seg_y[ss] - seg_dy[ss]) < 1.0e-7
-                else:
-                    assert (
-                        (seg_y[ss] - seg_y[my_downstream_ind]) - seg_dy[ss]
-                    ) < 1.0e-7
-
-        self._seg_mid_elevation = seg_y - (seg_dy / 2)
-
+        self._seg_mid_elevation = mid
         return
 
     def _warn_option_overwrite(self, opt_name, opt_dict_name, method_name):
