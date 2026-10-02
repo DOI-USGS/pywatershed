@@ -402,6 +402,45 @@ jobs:
           test_prms_solar_geom.py
           test_self_drive.py
 
+      - name: sagehen_5yr_cascades - generate and manage test data domain, run PRMS and convert csv output to NetCDF
+        working-directory: autotest
+        run: |
+          python generate_test_data.py \
+            --domain=sagehen_5yr \
+            --control_pattern=sagehen.control \
+            --remove_prms_csvs --remove_prms_output_dirs
+
+      - name: sagehen_5yr_cascades - list netcdf input files
+        working-directory: test_data
+        run: |
+          find sagehen_5yr/output -name '*.nc' | sort -n
+
+      - name: sagehen_5yr_cascades - pywatershed tests
+        working-directory: autotest
+        run: pytest
+          -vv
+          -rs
+          -n=auto
+          -m "not domainless"
+          --domain=sagehen_5yr
+          --control_pattern=sagehen.control
+          --durations=0
+          --error-for-skips
+          --cov=pywatershed
+          --cov-report=xml
+          --junitxml=pytest_sagehen_5yr_cascades.xml
+          test_preprocess_cascades.py
+          test_prms_param_separate_cascades.py
+          test_prms_above_snow.py
+          test_prms_atmosphere.py
+          test_prms_below_snow.py
+          test_prms_canopy.py
+          test_prms_groundwater.py
+          test_restart_processes.py
+          test_prms_snow.py
+          test_prms_solar_geom.py
+          test_self_drive.py
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v6
@@ -410,6 +449,7 @@ jobs:
           path: |
             ./autotest/pytest_sagehen_5yr_no_cascades.xml
             ./autotest/pytest_sagehen_5yr_no_gw_cascades.xml
+            ./autotest/pytest_sagehen_5yr_cascades.xml
 
       - name: Upload code coverage to Codecov
         uses: codecov/codecov-action@v5

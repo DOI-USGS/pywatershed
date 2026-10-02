@@ -8,6 +8,8 @@ from pywatershed.utils.preprocess_cascades import (
     check_cascade_param_bounds,
     check_no_lake_hrus,
     init_cascade_params,
+    init_gw_cascade_params,
+    order_gwrs,
     order_hrus,
 )
 
@@ -243,6 +245,70 @@ def test_preprocess(control, parameters):
     assert (hru_type == parameters.parameters["hru_type"]).all()
     active = hru_type != 0
     assert ((ncascade_hru[active] == 0) == (hru_type[active] == 3)).all()
+
+    if control.options.get("cascadegw_flag", 0) != 1:
+        return
+
+    # GWR cascades (cascadegw_flag=1). The sagehen_5yr gw_* parameters
+    # duplicate the hru_* parameters and PRMS (cascade.msgs, print_debug=13)
+    # reports the same routing order and UP/DOWN/FRACTION table for GWRs as
+    # for HRUs, so the GWR answers are the HRU answers.
+    gw_params = init_gw_cascade_params(
+        control,
+        newer_params,
+        gwr_type=new_params.parameters["hru_type"],
+        gwr_route_order=new_params.parameters["hru_route_order"],
+        verbosity=100,
+    )
+    assert (gw_params.parameters["gwr_route_order"] == answer).all()
+    for gw_name, hru_name in (
+        ("ncascade_gwr", "ncascade_hru"),
+        ("gwr_down", "hru_down"),
+        ("gwr_down_frac", "hru_down_frac"),
+        ("cascade_gwr_area", "cascade_area"),
+    ):
+        assert (
+            gw_params.parameters[gw_name] == newer_params.parameters[hru_name]
+        ).all(), gw_name
+
+
+def test_order_gwrs_no_cascade_error():
+    # GWR 2 neither cascades nor receives flow: PRMS refuses this when
+    # gwr_swale_flag = 0 (order_hrus would turn HRU 2 into a swale instead).
+    nhru = 3
+    gwr_route_order = np.array([1, 2, 3], dtype="int64")
+    ncascade_gwr = np.array([1, 0, 1], dtype="int64")
+    gwr_down = np.array([[3, 0, -1]], dtype="int64")
+    gwr_type = np.array([1, 1, 1], dtype="int64")
+    with pytest.raises(ValueError, match="do not cascade flow"):
+        order_gwrs(
+            nhru,
+            nhru,
+            gwr_route_order,
+            ncascade_gwr,
+            gwr_down,
+            gwr_type,
+            circle_switch=1,
+        )
+
+
+def test_order_gwrs_circle():
+    # GWR 1 cascades to a segment (root); GWR 2 -> GWR 3 -> GWR 2 is a circle
+    nhru = 3
+    gwr_route_order = np.array([1, 2, 3], dtype="int64")
+    ncascade_gwr = np.array([1, 1, 1], dtype="int64")
+    gwr_down = np.array([[-1, 3, 2]], dtype="int64")
+    gwr_type = np.array([1, 1, 1], dtype="int64")
+    with pytest.raises(ValueError, match="Circular cascading path"):
+        order_gwrs(
+            nhru,
+            nhru,
+            gwr_route_order,
+            ncascade_gwr,
+            gwr_down,
+            gwr_type,
+            circle_switch=1,
+        )
 
 
 @pytest.mark.domainless

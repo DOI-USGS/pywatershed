@@ -41,6 +41,21 @@ New Features
   (5609 cells with inactive cells) test domains, both tested in CI on
   all platforms. Demonstrated in the new notebook
   ``examples/11_cascading_flow.ipynb``. (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+- Groundwater reservoir (GWR) cascading flow following PRMS
+  ``cascadegw_flag=1`` (GWR cascades from the ``gw_up_id``, ``gw_down_id``,
+  ``gw_pct_up`` and ``gw_strmseg_down_id`` parameters) and
+  ``cascadegw_flag=2`` (the HRU cascades reused for the GWRs): new process
+  class :class:`PRMSGroundwaterCascadesNoDprst` (gwflow.f90
+  ``rungw_cascade``, GWRs processed in ``gwr_route_order``) with new
+  variables ``gw_upslope``, ``gw_upslope_hru`` and ``hru_gw_cascadeflow``.
+  :func:`~utils.preprocess_cascades.preprocess_cascade_params` derives the
+  GWR cascade parameters (cascade.f90 ``initgw_cascade`` and ``order_gwrs``)
+  when ``cascadegw_flag`` is set; ``gwr_swale_flag != 0`` raises. Verified
+  against PRMS 5.2.1 on the ``sagehen_5yr`` ``sagehen.control``
+  configuration, now tested in CI on all platforms. :class:`PRMSChannel`
+  does not yet take the cascaded ``stream_seg_in`` (see ``MAINTENANCE.md``),
+  so the channel is left out of the cascade model configurations.
+  (:pull:`417`) By `James McCreight <https://github.com/jmccreight>`_.
 - :class:`analysis.ProcessPlot` reads geodatabase layers
   (``hru_layer``/``seg_layer`` name the layer within ``hru_shp_file_name``
   /``seg_shp_file_name``), sizes each map to the domain's extent and sets

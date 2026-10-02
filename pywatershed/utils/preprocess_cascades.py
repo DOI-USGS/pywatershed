@@ -20,10 +20,11 @@ returns the input :class:`Parameters` with these added:
   entries are downslope HRU indices (1-based), negative ones are
   stream segments.
 
-Only HRU cascades (control ``cascade_flag = 1``) are handled; the
-HRU-to-segment-only mode (``cascade_flag = 2``) raises, and
-groundwater cascades are not derived here. The basin-area sums that
-basin.f90 computes alongside are not reproduced.
+HRU cascades (control ``cascade_flag = 1``) are handled, and groundwater
+reservoir cascades (``cascadegw_flag`` 1 or 2) are derived alongside by
+:func:`init_gw_cascade_params`; the HRU-to-segment-only mode
+(``cascade_flag = 2``) raises. The basin-area sums that basin.f90
+computes alongside are not reproduced.
 
 :class:`PRMSRunoffCascadesNoDprst` and
 :class:`PRMSSoilzoneCascadesNoDprst` call
@@ -42,6 +43,7 @@ import numpy as np
 import xarray as xr
 
 from ..base import Control
+from ..base.data_model import DatasetDict
 from ..constants import ACTIVE, HruType, one
 from ..parameters import Parameters
 
@@ -140,6 +142,10 @@ def preprocess_cascade_params(
 ) -> Parameters:
     """Preprocess to obtain all cascade parameters from PRMS parameter files.
 
+    When the control option ``cascadegw_flag`` is set, the groundwater
+    reservoir (GWR) cascade parameters are added as well
+    (init_gw_cascade_params).
+
     Args:
       control: a Control object.
       parameters: a parameter object of class Parameters.
@@ -151,7 +157,49 @@ def preprocess_cascade_params(
       Parameters: the input parameters with all cascade parameters added
     """
     new_params = calc_hru_route_order(parameters)
-    return init_cascade_params(control, new_params, verbosity=verbosity)
+
+    # In PRMS, basin.f90 copies hru_type and hru_route_order to gwr_type and
+    # gwr_route_order BEFORE cascade.f90::order_hrus edits them (swales,
+    # routing order). initgw_cascade (cascadegw_flag=1) uses those copies.
+    gwr_type = new_params.parameters["hru_type"].copy()
+    gwr_route_order = new_params.parameters["hru_route_order"].copy()
+
+    new_params = init_cascade_params(control, new_params, verbosity=verbosity)
+
+    cascadegw_flag = control.options.get("cascadegw_flag", 0)
+    if cascadegw_flag:
+        new_params = init_gw_cascade_params(
+            control,
+            new_params,
+            gwr_type=gwr_type,
+            gwr_route_order=gwr_route_order,
+            verbosity=verbosity,
+        )
+
+    # cascade.f90 declares cascade_min (REAL, default 0.000001 inches): flows
+    # at or below it do not cascade. Supply the PRMS default when the
+    # parameter file omits it.
+    if "cascade_min" not in new_params.parameters.keys():
+        ds = new_params.to_xr_ds()
+        ds["cascade_min"] = xr.Variable(
+            "scalar", np.array([float(np.float32(1.0e-6))])
+        )
+        new_params = Parameters.from_ds(ds)
+
+    return new_params
+
+
+def _max_links(up_id: np.ndarray, nunits: int) -> int:
+    """Maximum number of cascade links from any one HRU/GWR (>= 1).
+
+    From cascade.f90::cascdecl, where the result sizes the 2-D arrays
+    (ndown) for HRUs and GWRs alike.
+    """
+    counts = np.zeros(nunits, dtype="int64")
+    for k in up_id:
+        if k > 0:
+            counts[k - 1] += 1
+    return max(1, int(counts.max()))
 
 
 def calc_hru_route_order(parameters: Parameters) -> Parameters:
@@ -304,6 +352,11 @@ def init_cascade_params(
             ncascade_hru[k - 1] = ncascade_hru[k - 1] + 1
             if ncascade_hru[k - 1] > ndown:
                 ndown = ncascade_hru[k - 1]
+
+    # cascade.f90::cascdecl sizes ndown over the GWR links too, so the HRU
+    # and GWR 2-D arrays share one ndown dimension.
+    if control.options.get("cascadegw_flag", 0) == 1:
+        ndown = max(ndown, _max_links(params.data_vars["gw_up_id"], nhru))
 
     if ndown > 15:
         msg = f"possible ndown issue: {ndown=}"
@@ -759,3 +812,447 @@ def order_hrus(
         raise ValueError(msg)
 
     return hru_type, hru_route_order
+
+
+def init_gw_cascade_params(
+    control: Control,
+    parameters: Parameters,
+    gwr_type: np.ndarray,
+    gwr_route_order: np.ndarray,
+    verbosity: int = 1,
+) -> Parameters:
+    """Groundwater reservoir (GWR) cascades from cascade.f90::cascinit.
+
+    Requires the HRU cascade parameters (init_cascade_params) to be present.
+    Control option ``cascadegw_flag``: 1 derives the GWR cascades from the
+    parameters gw_up_id, gw_down_id, gw_pct_up and gw_strmseg_down_id
+    (initgw_cascade + order_gwrs); 2 copies the HRU cascades.
+
+    Args:
+      control: a Control object.
+      parameters: a Parameters object with the HRU cascade parameters.
+      gwr_type: hru_type as it was BEFORE init_cascade_params edited it
+        (PRMS copies it in basin.f90). Only used for cascadegw_flag=1.
+      gwr_route_order: hru_route_order as it was BEFORE init_cascade_params
+        (basin.f90 order). Only used for cascadegw_flag=1.
+      verbosity: Currently an integer in [0, 1], boolean.
+
+    Returns:
+      Parameters: the input parameters with gwr_route_order, ncascade_gwr,
+        gwr_down, gwr_down_frac, and cascade_gwr_area added.
+    """
+    cascadegw_flag = control.options.get("cascadegw_flag", 0)
+    gwr_swale_flag = control.options.get("gwr_swale_flag", 0)
+    if gwr_swale_flag != 0:
+        msg = "gwr_swale_flag != 0 is not implemented in pywatershed"
+        raise NotImplementedError(msg)
+
+    params = parameters.to_dd()
+    nhru = params.dims["nhru"]
+    if "ngw" in params.dims.keys() and params.dims["ngw"] != nhru:
+        msg = f"ngw ({params.dims['ngw']}) must equal nhru ({nhru})"
+        raise ValueError(msg)
+
+    if cascadegw_flag == 2:
+        # CASCADEGW_SAME: GWR cascades set to the (ordered) HRU cascades
+        gwr_type = params.data_vars["hru_type"]
+        gwr_route_order = params.data_vars["hru_route_order"].copy()
+        ncascade_gwr = params.data_vars["ncascade_hru"].copy()
+        gwr_down = params.data_vars["hru_down"].copy()
+        gwr_down_frac = params.data_vars["hru_down_frac"].copy()
+        cascade_gwr_area = params.data_vars["cascade_area"].copy()
+
+    elif cascadegw_flag == 1:
+        (
+            ncascade_gwr,
+            gwr_down,
+            gwr_down_frac,
+            cascade_gwr_area,
+            gwr_type,
+            gwr_route_order,
+        ) = _initgw_cascade(
+            params,
+            gwr_type.copy(),
+            gwr_route_order.copy(),
+            ndown=params.data_vars["hru_down"].shape[0],
+            verbosity=verbosity,
+        )
+
+    else:
+        msg = f"invalid cascadegw_flag value: {cascadegw_flag}"
+        raise ValueError(msg)
+
+    # cascinit: GWRs cannot be swales when gwr_swale_flag = 0
+    active_gwrs = int((gwr_type != HruType.INACTIVE.value).sum())
+    for ii in range(active_gwrs):
+        i = gwr_route_order[ii]
+        if gwr_type[i - 1] == HruType.SWALE.value:
+            msg = f"GWR is a swale when gwr_swale_flag = 0, GWR: {i}"
+            raise ValueError(msg)
+
+    new_params = parameters.to_xr_ds()
+    new_params["gwr_route_order"] = xr.Variable("nhru", gwr_route_order)
+    new_params["ncascade_gwr"] = xr.Variable("nhru", ncascade_gwr)
+    new_params["gwr_down"] = xr.Variable(["ndown", "nhru"], gwr_down)
+    new_params["gwr_down_frac"] = xr.Variable(["ndown", "nhru"], gwr_down_frac)
+    new_params["cascade_gwr_area"] = xr.Variable(
+        ["ndown", "nhru"], cascade_gwr_area
+    )
+
+    return Parameters.from_ds(new_params)
+
+
+def _initgw_cascade(
+    params: DatasetDict,
+    gwr_type: np.ndarray,
+    gwr_route_order: np.ndarray,
+    ndown: int,
+    verbosity: int = 1,
+) -> tuple:
+    """From cascade.f90::initgw_cascade (cascadegw_flag=1).
+
+    The same link-building as init_cascade_params for HRUs, with these
+    differences taken from the Fortran: gw_pct_up is capped at 1.0 (not
+    0.9998), there is no lake check, and no gwr_down_fracwt.
+    """
+
+    def verbosity_msg(msg: str, verbosity_thresh: int = 1) -> None:
+        if verbosity >= verbosity_thresh:
+            print(msg, flush=True)
+
+    nhru = params.dims["nhru"]
+    nsegment = params.dims["nsegment"]
+    ncascdgw = params.dims["ncascdgw"]
+    cascade_tol = params.data_vars["cascade_tol"][0]
+    cascade_flg = params.data_vars["cascade_flg"][0]
+    circle_switch = params.data_vars["circle_switch"][0]
+    hru_area = params.data_vars["hru_area"]
+    active_gwrs = int((gwr_type != HruType.INACTIVE.value).sum())
+
+    # 1-based indices kept as in init_cascade_params (negative = segment)
+    gw_up_id = params.data_vars["gw_up_id"]
+    gw_down_id = params.data_vars["gw_down_id"]
+    gw_strmseg_down_id = params.data_vars["gw_strmseg_down_id"]
+    gw_pct_up = params.data_vars["gw_pct_up"]
+
+    ncascade_gwr = np.zeros([nhru], dtype="int64")
+    gwr_frac = np.zeros([nhru], dtype="double")
+    gwr_down = np.zeros([ndown, nhru], dtype="int64")
+    gwr_down_frac = np.zeros([ndown, nhru], dtype="double")
+    cascade_gwr_area = np.zeros([ndown, nhru], dtype="double")
+
+    for ii in range(ncascdgw):
+        kup = gw_up_id[ii]
+        if kup < 1:
+            msg = f"Cascade ignored as gw_up_id<1, cascade: {ii + 1}, {kup=}"
+            print(msg)
+            continue
+
+        jdn = gw_down_id[ii]
+        frac = gw_pct_up[ii]
+        if frac > 1.0:
+            frac = 1.0
+        istrm = gw_strmseg_down_id[ii]
+
+        diag_msg = (
+            f"\nCascade: {ii+1=}; up GWR: {kup=}; down GWR: {jdn=}; "
+            f"\nup fraction: {frac=}; stream segment: {istrm=}"
+        )
+
+        if frac < 0.00001:
+            print("Cascade ignored as gw_pct_up=0.0, " + diag_msg)
+        elif istrm > nsegment:
+            print("Cascade ignored as segment>nsegment, " + diag_msg)
+        elif (kup < 1) and (jdn == 0):
+            print("Cascade ignored as up and down GWR = 0, " + diag_msg)
+        elif (istrm == 0) and (jdn == 0):
+            print("Cascade ignored as down GWR and segment = 0, " + diag_msg)
+        elif gwr_type[kup - 1] == HruType.INACTIVE.value:
+            print("Cascade ignored as up GWR is inactive, " + diag_msg)
+        elif gwr_type[kup - 1] == HruType.SWALE.value:
+            # gwr_swale_flag == 0 is guaranteed by the caller
+            msg = (
+                "ERROR, Cascade as up GWR specified as a swale and "
+                "gwr_swale_flag = 0" + diag_msg
+            )
+            raise ValueError(msg)
+        else:
+            if (jdn > 0) and (istrm < 1):
+                if gwr_type[jdn - 1] == HruType.INACTIVE.value:
+                    msg = "Cascade ignored as down GWR is inactive, "
+                    print(msg + diag_msg)
+                    continue
+
+            carea = frac * hru_area[kup - 1]
+
+            # get rid of small cascades, redistribute fractions
+            if (carea < cascade_tol) and (frac < 0.075):
+                msg = (
+                    "*** WARNING, ignoring small GWR cascade: "
+                    "carea<cascade_tol\n"
+                    f"Cascade: {ii+1=}; GWR up: {kup=}; GWR down: {jdn=}; "
+                    f"fraction up: {frac*100.0=}; cascade area: {carea=}"
+                )
+                print(msg)
+
+            elif cascade_flg == 1:
+                # This forces 1 to 1 cascades
+                if frac > gwr_frac[kup - 1]:
+                    gwr_frac[kup - 1] = frac
+                    ncascade_gwr[kup - 1] = 1
+                    gwr_down_frac[0, kup - 1] = frac
+                    if istrm > 0:
+                        gwr_down[0, kup - 1] = -istrm
+                    else:
+                        gwr_down[0, kup - 1] = jdn
+
+            else:
+                gwr_frac[kup - 1] = gwr_frac[kup - 1] + frac
+                if gwr_frac[kup - 1] > one:
+                    if gwr_frac[kup - 1] > 1.00001:
+                        msg = (
+                            "Addition of GWR cascade link makes contributing "
+                            "area add up to > 1.0, thus fraction reduced: "
+                            f"\nCascade: {ii+1=}; up GWR: {kup=}; "
+                            f" down GWR: {jdn=};"
+                            f" up fraction: {gwr_frac[kup-1]=};"
+                            f" stream segment: {istrm=}"
+                        )
+                        print(msg)
+
+                    frac = frac + 1.0 - gwr_frac[kup - 1]
+                    gwr_frac[kup - 1] = 1.0
+
+                ncascade_gwr[kup - 1] = ncascade_gwr[kup - 1] + 1
+                kk = ncascade_gwr[kup - 1]
+                gwr_down_frac[kk - 1, kup - 1] = frac
+                if istrm > 0:
+                    gwr_down[kk - 1, kup - 1] = -istrm
+                else:
+                    gwr_down[kk - 1, kup - 1] = jdn
+
+    # < end of link loop
+
+    for ii in range(active_gwrs):
+        i = gwr_route_order[ii]
+        num = ncascade_gwr[i - 1]
+        if num == 0:
+            continue
+
+        for k in range(num):
+            frac = gwr_down_frac[k, i - 1]
+            gwr_down_frac[k, i - 1] = (
+                frac + frac * (1.0 - gwr_frac[i - 1]) / gwr_frac[i - 1]
+            )
+
+        k = 0
+        for kk in range(num):
+            dngwr = gwr_down[kk, i - 1]
+            if dngwr == 0:
+                continue
+
+            gwr_down_frac[k, i - 1] = gwr_down_frac[kk, i - 1]
+            gwr_down[k, i - 1] = dngwr
+            j = num
+
+            while (j - 1) > kk:
+                if dngwr == gwr_down[j - 1, i - 1]:
+                    gwr_down[j - 1, i - 1] = 0
+                    gwr_down_frac[k, i - 1] = (
+                        gwr_down_frac[k, i - 1] + gwr_down_frac[j - 1, i - 1]
+                    )
+                    if gwr_down_frac[k, i - 1] > 1.00001:
+                        msg = (
+                            "combining GWR cascade links makes contributing "
+                            "area add up to > 1.0, thus fraction reduced."
+                            f"up GWR: {i}, down GWR: {dngwr}"
+                        )
+                        verbosity_msg(msg)
+                        gwr_down_frac[k, i - 1] = 1.0
+
+                    if dngwr < 0:
+                        msg = (
+                            "Combined multiple cascade paths from "
+                            f"GWR: {i=} to stream segment, {abs(dngwr)=}"
+                        )
+                    else:
+                        msg = (
+                            "Combined multiple cascade paths from "
+                            f"GWR: {i=}, downslope GWR, {dngwr=}"
+                        )
+                    print(msg)
+
+                    ncascade_gwr[i - 1] = ncascade_gwr[i - 1] - 1
+
+                j -= 1
+
+            cascade_gwr_area[k, i - 1] = (
+                gwr_down_frac[k, i - 1] * hru_area[i - 1]
+            )
+            k += 1
+
+    # < end of combine loop
+
+    gwr_type, gwr_route_order = order_gwrs(
+        nhru,
+        active_gwrs,
+        gwr_route_order,
+        ncascade_gwr,
+        gwr_down,
+        gwr_type,
+        circle_switch,
+    )
+
+    verbosity_msg(f"{gwr_route_order=}")
+
+    return (
+        ncascade_gwr,
+        gwr_down,
+        gwr_down_frac,
+        cascade_gwr_area,
+        gwr_type,
+        gwr_route_order,
+    )
+
+
+def order_gwrs(
+    nhru: int,
+    active_gwrs: int,
+    gwr_route_order: np.ndarray,
+    ncascade_gwr: np.ndarray,
+    gwr_down: np.ndarray,
+    gwr_type: np.ndarray,
+    circle_switch: int,
+) -> tuple:
+    """From cascade.f90::order_gwrs, for gwr_swale_flag = 0.
+
+    Differs from order_hrus: a GWR that does not cascade is an error (with
+    gwr_swale_flag > 0 PRMS would change its type to swale instead), and
+    there is no lake handling.
+    """
+    max_up_id_count = 0
+    up_id_count = np.zeros(nhru, dtype="int64")
+    dn_id_count = np.zeros(nhru, dtype="int64")
+    roots = np.zeros(nhru, dtype="int64")
+    is_gwr_on_list = np.zeros(nhru, dtype="int64")
+
+    for ii in range(active_gwrs):
+        i = gwr_route_order[ii]
+        for k in range(ncascade_gwr[i - 1]):
+            dngwr = gwr_down[k, i - 1]
+            if dngwr > 0:
+                dn_id_count[i - 1] = dn_id_count[i - 1] + 1
+                up_id_count[dngwr - 1] = up_id_count[dngwr - 1] + 1
+                if up_id_count[dngwr - 1] > max_up_id_count:
+                    max_up_id_count = up_id_count[dngwr - 1]
+
+    gwrs_up_list = np.zeros([max_up_id_count, nhru], dtype="int64")
+    up_id_cnt = up_id_count.copy()
+
+    nroots = 0
+    no_cascade_gwrs = []
+    for ii in range(active_gwrs):
+        i = gwr_route_order[ii]
+        if dn_id_count[i - 1] == 0:
+            nroots = nroots + 1
+            roots[nroots - 1] = i
+
+        if ncascade_gwr[i - 1] == 0:
+            # GWR does not cascade flow: an error when gwr_swale_flag = 0
+            # (Fortran formats 9010/9011 then Iret = 1)
+            no_cascade_gwrs.append(i)
+            continue
+
+        for k in range(ncascade_gwr[i - 1]):
+            dngwr = gwr_down[k, i - 1]
+            if dngwr > 0:
+                gwrs_up_list[up_id_cnt[dngwr - 1] - 1, dngwr - 1] = i
+                up_id_cnt[dngwr - 1] = up_id_cnt[dngwr - 1] - 1
+
+    if len(no_cascade_gwrs):
+        msg = (
+            "GWRs that do not cascade flow with gwr_swale_flag = 0: "
+            f"{no_cascade_gwrs}"
+        )
+        raise ValueError(msg)
+
+    del up_id_cnt
+
+    # check for circles when circle_switch = 1 (see order_hrus)
+    if circle_switch == ACTIVE:
+        graph = nx.DiGraph()
+        for ii in range(active_gwrs):
+            i = gwr_route_order[ii]
+            for k in range(ncascade_gwr[i - 1]):
+                dngwr = gwr_down[k, i - 1]
+                if dngwr > 0:
+                    graph.add_edge(i, dngwr)
+        try:
+            cycle = nx.find_cycle(graph)
+        except nx.NetworkXNoCycle:
+            pass
+        else:
+            msg = (
+                "Circular cascading path specified among GWRs: "
+                f"{[edge[0] for edge in cycle]}"
+            )
+            raise ValueError(msg)
+
+    # determine GWR routing order
+    gwr_route_order[:] = 0
+    igworder = 0
+    while igworder < active_gwrs:
+        added = 0
+        for i in range(nhru):
+            if gwr_type[i] == HruType.INACTIVE.value:
+                continue
+
+            if is_gwr_on_list[i] == 0:
+                goes_on_list = 1
+                for j in range(up_id_count[i]):
+                    up_gwr_id = gwrs_up_list[j, i]
+                    if is_gwr_on_list[up_gwr_id - 1] == 0:
+                        goes_on_list = 0
+                        break
+
+                if goes_on_list == 1:
+                    is_gwr_on_list[i] = 1
+                    igworder = igworder + 1
+                    gwr_route_order[igworder - 1] = i + 1  # keep it 1-based
+                    added = 1
+
+        if added == 0:
+            not_in_order_list = [
+                i for i in range(nhru) if is_gwr_on_list[i] == 0
+            ]
+            msg = (
+                f"indices of GWRs not in order: {not_in_order_list}\n\n"
+                "No GWRs added to routing order on last pass through \n"
+                "cascades, possible circles. \n"
+                f"{gwr_route_order=}"
+            )
+            raise ValueError(msg)
+
+    msg = (
+        f"{nroots=} GWRs do not cascade to another GWR (roots)\n"
+        f"{roots[0:nroots]=}"
+    )
+    print(msg)
+
+    if igworder != active_gwrs:
+        list_missing = [
+            i
+            for i in range(nhru)
+            if is_gwr_on_list[i] == 0 and gwr_type[i] != HruType.INACTIVE.value
+        ]
+        msg = (
+            "Not all GWRs are included in the cascading pattern,\n"
+            "likely circle or inactive GWRs.\n"
+            f"Number of GWRs in pattern: {igworder=}\n"
+            f"Number of GWRs: {nhru=}\n"
+            f"Number of active GWRs: {active_gwrs=}\n"
+            f"GWRs missing: {list_missing}\n"
+        )
+        raise ValueError(msg)
+
+    return gwr_type, gwr_route_order

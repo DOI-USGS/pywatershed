@@ -11,6 +11,7 @@
     - [Drop the netCDF4 ndarray.shape warning filter](#drop-the-netcdf4-ndarrayshape-warning-filter)
     - [Drop the gfortran <16 ceiling (conda-forge win-64 link failure)](#drop-the-gfortran-16-ceiling-conda-forge-win-64-link-failure)
     - [PR #412 follow-ups: pre-commit notebook coverage, holoviews floor](#pr-412-follow-ups-pre-commit-notebook-coverage-holoviews-floor)
+    - [PRMSChannel ignores cascade flow to stream segments](#prmschannel-ignores-cascade-flow-to-stream-segments)
     - [Decide the fate of preprocess_gridded_params before 4.0](#decide-the-fate-of-preprocess_gridded_params-before-40)
     - [Metadata for derived cascade and active-HRU parameters](#metadata-for-derived-cascade-and-active-hru-parameters)
     - [PRMSChannel ignores stream_seg_in: cascaded flow never reaches the channel](#prmschannel-ignores-stream_seg_in-cascaded-flow-never-reaches-the-channel)
@@ -234,6 +235,44 @@ check it), **Action** (what to do once unblocked), and optional
 - **Notes:** the pre-commit hook only ever sees *staged* files while CI
   runs `ruff check .` over the whole tree. That gap is what let #412's
   notebook errors reach CI in the first place.
+
+### PRMSChannel ignores cascade flow to stream segments
+
+- **Blocked on:** PR #407 (the cascades port) merged to `develop`.
+  Check: `merged_at` is set at
+  `https://api.github.com/repos/DOI-USGS/pywatershed/pulls/407`.
+- **Action:** make `PRMSChannel` follow routing.f90 when cascades are
+  on (`cascade_flag > 0`):
+
+  ```fortran
+  IF ( Cascade_flag==CASCADE_OFF ) THEN
+    Seg_lateral_inflow = 0.0D0
+  ELSE
+    Seg_lateral_inflow = Strm_seg_in
+  ENDIF
+  ...
+  IF ( Cascade_flag==CASCADE_OFF ) Seg_lateral_inflow(i) = Seg_lateral_inflow(i) + Hru_outflow(j)
+  ```
+
+  Today `PRMSChannel.get_inputs()` is `sroff_vol`, `ssres_flow_vol`,
+  `gwres_flow_vol` and lateral inflow is always summed by
+  `hru_segment`, i.e. the `CASCADE_OFF` branch. Under cascades that is
+  wrong twice: the water routed to segments by the runoff, soilzone and
+  groundwater cascade classes (`stream_seg_in`) never reaches the
+  channel, and per-HRU outflow is added by `hru_segment` when PRMS
+  would not add it. The fix is to take `stream_seg_in` as an input and
+  use it as `seg_lateral_inflow` when cascades are on. In a `Model`,
+  inputs are held by reference to the source array, so runoff zeroes
+  `stream_seg_in` each step and soilzone and groundwater add into it in
+  place; after groundwater runs it equals PRMS's `Strm_seg_in`, so
+  wiring the channel to runoff's `stream_seg_in` suffices. Add the
+  channel to the sagehen_5yr cascade configs in
+  `test_prms_below_snow.py` (PRMS `seg_outflow` is in the answer set)
+  and to the sagehen CI test lists.
+- **Notes:** found 2026-09-09 on branch `feat_gw_cascades` (groundwater
+  cascades). James wants the channel behavior understood before
+  fixing, and not fixed on the cascade branches; `DESIGN_NOTES.md`
+  records the `stream_seg_in` declaration problems.
 
 ### Decide the fate of preprocess_gridded_params before 4.0
 

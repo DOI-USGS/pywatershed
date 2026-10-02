@@ -28,6 +28,7 @@ process_order_nhm = [
     "PRMSSoilzoneNoDprst",
     "PRMSEt",
     "PRMSGroundwater",
+    "PRMSGroundwaterCascadesNoDprst",
     "PRMSGroundwaterNoDprst",
     "PRMSChannel",
     "PRMSHydraulicGeometryFull",

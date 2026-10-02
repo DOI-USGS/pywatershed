@@ -87,6 +87,7 @@ The cost also compounds: three binary options already give
   replaces every `None` input with a zero array when `_dprst_flag` is
   False, because the child passes `dprst_evap_hru=None` and
   `dprst_seep_hru=None` through a signature that still requires them.
+  `prms_groundwater.py` has the same loop for `dprst_seep_hru`.
   Root cause: parent decides, and declarations spread.
 - **Depression-storage restart variables on a no-dprst class**
   (PR 407, resolved there). `PRMSRunoffCascadesNoDprst` inherited
@@ -114,7 +115,8 @@ The cost also compounds: three binary options already give
   before the parent wires them and the parent's `__init__` cannot be
   entered halfway. When the parameters are not already preprocessed,
   `preprocess_cascade_params` also runs once per class, so twice per
-  model. Not worked around. Root cause: parent decides.
+  model (three times with the groundwater cascade class). Not worked
+  around. Root cause: parent decides.
 - **Two off-switch conventions for one option** (PR 407 review,
   Quality). `PRMSRunoff` turns cascades off with per-step NaN sentinel
   arrays (`prms_runoff.py`, search `nan_array`) plus a compiled dummy
@@ -123,3 +125,18 @@ The cost also compounds: three binary options already give
   parent's kernel carries arguments only the child fills. Not worked
   around. Root cause: declarations spread (the option lives in the
   kernel signature of a class that does not have the option).
+- **A child's input threaded through the parent's signature**
+  (feat_gw_cascades, 2026-09-09). `PRMSGroundwater.__init__` gained
+  `stream_seg_in: adaptable = None` that the parent never reads,
+  because `Process._set_inputs(locals())` runs inside the parent's
+  `__init__`, so any input of a child must be an argument of the
+  parent. `PRMSSoilzone` already had the same shape for the same
+  variable (first case above); the B13 guard is what keeps the
+  parent from silently dropping it. Root cause: declarations spread.
+- **Third convention for `self.name`** (feat_gw_cascades,
+  2026-09-09). `PRMSGroundwater` has no `hasattr` guard, so
+  `PRMSGroundwaterCascadesNoDprst` sets `self.name` *after*
+  `super().__init__()` and reruns `_set_budget` so the budget carries
+  the child's name; the runoff and soilzone children set it *before*
+  and rely on the guard. Same problem, now solved two ways. Root
+  cause: parent decides.

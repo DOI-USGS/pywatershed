@@ -90,6 +90,7 @@ export: PRMSChannelFlowNode
 export: PRMSChannelFlowNodeMaker
 export: PRMSEt
 export: PRMSGroundwater
+export: PRMSGroundwaterCascadesNoDprst
 export: PRMSGroundwaterNoDprst
 export: PRMSHydraulicGeometryFull
 export: PRMSHydraulicGeometryWidthOnly
@@ -164,7 +165,8 @@ init: PRMSChannel(self, control, discretization, parameters, sroff_vol, ssres_fl
 init: PRMSChannelFlowNode(self, control, tsi, ts, c0, c1, c2, calc_method=None)
 init: PRMSChannelFlowNodeMaker(self, discretization, parameters, calc_method=None, verbose=None)
 init: PRMSEt(self, control, discretization, parameters, potet, hru_impervevap, hru_intcpevap, snow_evap, dprst_evap_hru, perv_actet, input_aliases=None, verbose=False, imbalance_behavior='defer')
-init: PRMSGroundwater(self, control, discretization, parameters, soil_to_gw, ssr_to_gw, dprst_seep_hru, dprst_flag=None, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
+init: PRMSGroundwater(self, control, discretization, parameters, soil_to_gw, ssr_to_gw, dprst_seep_hru, stream_seg_in=None, dprst_flag=None, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
+init: PRMSGroundwaterCascadesNoDprst(self, control, discretization, parameters, soil_to_gw, ssr_to_gw, stream_seg_in, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSGroundwaterNoDprst(self, control, discretization, parameters, soil_to_gw, ssr_to_gw, imbalance_behavior='defer', calc_method=None, input_aliases=None, verbose=None, restart_read=False, restart_write=False, restart_write_freq=False)
 init: PRMSHydraulicGeometryFull(self, control, discretization, parameters, seg_outflow, input_aliases=None, verbose=False)
 init: PRMSHydraulicGeometryWidthOnly(self, control, discretization, parameters, seg_outflow, input_aliases=None, verbose=False)
@@ -764,6 +766,7 @@ meta-var: gw_in_soil type=float64 units=acre-inches
 meta-var: gw_in_ssr type=float64 units=acre-inches
 meta-var: gw_seep_lakein type=float64 units=acre-feet
 meta-var: gw_upslope type=float64 units=acre-inches
+meta-var: gw_upslope_hru type=float64 units=inches
 meta-var: gwr_gain type=float64 units=cfs
 meta-var: gwr_gain_tot type=float64 units=cfs
 meta-var: gwr_transfer type=float64 units=cfs
@@ -1205,6 +1208,18 @@ set: PRMSGroundwater.get_mass_budget_terms storage_changes: gwres_stor_change
 set: PRMSGroundwater.get_parameters tuple: gwflow_coef gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf hru_type
 set: PRMSGroundwater.get_restart_variables list: gwres_stor
 set: PRMSGroundwater.get_variables list: gwres_flow gwres_flow_vol gwres_sink gwres_stor gwres_stor_change gwres_stor_old
+set: PRMSGroundwaterCascadesNoDprst.get_dimensions tuple: nhru nsegment
+set: PRMSGroundwaterCascadesNoDprst.get_energy_budget_terms inputs: 
+set: PRMSGroundwaterCascadesNoDprst.get_energy_budget_terms outputs: 
+set: PRMSGroundwaterCascadesNoDprst.get_energy_budget_terms storage_changes: 
+set: PRMSGroundwaterCascadesNoDprst.get_init_values dict-keys: gw_upslope gw_upslope_hru gwres_flow gwres_flow_vol gwres_sink gwres_stor gwres_stor_change gwres_stor_old hru_gw_cascadeflow
+set: PRMSGroundwaterCascadesNoDprst.get_inputs tuple: soil_to_gw ssr_to_gw stream_seg_in
+set: PRMSGroundwaterCascadesNoDprst.get_mass_budget_terms inputs: gw_upslope_hru soil_to_gw ssr_to_gw
+set: PRMSGroundwaterCascadesNoDprst.get_mass_budget_terms outputs: gwres_flow hru_gw_cascadeflow
+set: PRMSGroundwaterCascadesNoDprst.get_mass_budget_terms storage_changes: gwres_stor_change
+set: PRMSGroundwaterCascadesNoDprst.get_parameters tuple: cascade_gwr_area cascade_min gwflow_coef gwr_down gwr_down_frac gwr_route_order gwsink_coef gwstor_init gwstor_min hru_area hru_in_to_cf hru_type ncascade_gwr
+set: PRMSGroundwaterCascadesNoDprst.get_restart_variables list: gwres_stor
+set: PRMSGroundwaterCascadesNoDprst.get_variables list: gw_upslope gw_upslope_hru gwres_flow gwres_flow_vol gwres_sink gwres_stor gwres_stor_change gwres_stor_old hru_gw_cascadeflow
 set: PRMSGroundwaterNoDprst.get_dimensions tuple: nhru
 set: PRMSGroundwaterNoDprst.get_energy_budget_terms inputs: 
 set: PRMSGroundwaterNoDprst.get_energy_budget_terms outputs: 

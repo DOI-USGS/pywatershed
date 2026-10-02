@@ -184,7 +184,7 @@ nhruOutON_OFF
 nhruOutVars
 1
 1
-86
+94
 ####
 nhruOut_freq
 1
@@ -197,7 +197,7 @@ nhruOut_format
 4
 ####
 nhruOutVar_names
-86
+94
 4
 albedo
 cap_infil_tot
@@ -205,11 +205,15 @@ cap_waterin
 contrib_fraction
 dunnian_flow
 freeh2o
+gw_upslope
 gwres_flow
 gwres_in
 gwres_sink
 gwres_stor
+hortonian_flow
 hru_actet
+hru_gw_cascadeflow
+hru_hortn_cascflow
 hru_impervevap
 hru_impervstor
 hru_intcpevap
@@ -221,6 +225,7 @@ hru_snow
 hru_sroffi
 hru_sroffp
 hru_storage
+hru_sz_cascadeflow
 imperv_evap
 imperv_stor
 infil
@@ -285,6 +290,9 @@ tminc
 tminf
 transp_on
 unused_potet
+upslope_dunnianflow
+upslope_hortonian
+upslope_interflow
 ####
 nhruOutBaseFileName
 1

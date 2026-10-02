@@ -34,6 +34,9 @@ from .hydrology.prms_channel_flow_graph import (
 )
 from .hydrology.prms_et import PRMSEt
 from .hydrology.prms_groundwater import PRMSGroundwater
+from .hydrology.prms_groundwater_cascades_no_dprst import (
+    PRMSGroundwaterCascadesNoDprst,
+)
 from .hydrology.prms_groundwater_no_dprst import PRMSGroundwaterNoDprst
 from .hydrology.prms_hydraulic_geometry import (
     PRMSHydraulicGeometryFull,
@@ -125,6 +128,7 @@ __all__ = (
     "PRMSChannel",
     "PRMSEt",
     "PRMSGroundwater",
+    "PRMSGroundwaterCascadesNoDprst",
     "PRMSGroundwaterNoDprst",
     "PRMSHydraulicGeometryFull",
     "PRMSHydraulicGeometryWidthOnly",

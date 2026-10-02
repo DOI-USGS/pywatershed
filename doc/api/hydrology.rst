@@ -22,6 +22,7 @@ Hydrologic model components.
    PRMSSoilzoneCascadesNoDprst
    PRMSSoilzoneNoDprst
    PRMSGroundwater
+   PRMSGroundwaterCascadesNoDprst
    PRMSGroundwaterNoDprst
    PRMSChannel
    PRMSHydraulicGeometryFull

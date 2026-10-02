@@ -1704,6 +1704,13 @@ gw_upslope:
     0: nhru
   type: float64
   units: acre-inches
+gw_upslope_hru:
+  desc: Groundwater flow received from upslope GWRs for each GWR, depth on GWR area
+  dims:
+    0: nhru
+  type: float64
+  units: inches
+  var_category: mass flux
 gwr_gain:
   desc: Transfer gain to the groundwater reservoir of each HRU for each time step
   dims:

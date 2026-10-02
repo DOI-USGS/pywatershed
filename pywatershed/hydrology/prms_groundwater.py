@@ -34,6 +34,8 @@ class PRMSGroundwater(ConservativeProcess, ActiveHruMixin):
             for each HRU
         dprst_seep_hru: Seepage from surface-depression storage to associated
             GWR for each HRU
+        stream_seg_in: Flow into each stream segment from cascading flow
+            (cfs); only used by PRMSGroundwaterCascadesNoDprst
         imbalance_behavior: one of ["defer", None, "warn", "error"]
             with "defer" being the default and defering to
             control.options["imbalance_behavior"] when available. When
@@ -77,6 +79,7 @@ class PRMSGroundwater(ConservativeProcess, ActiveHruMixin):
         soil_to_gw: adaptable,
         ssr_to_gw: adaptable,
         dprst_seep_hru: adaptable,
+        stream_seg_in: adaptable = None,
         dprst_flag: bool = None,
         imbalance_behavior: Literal["defer", None, "warn", "error"] = "defer",
         calc_method: Literal["numba", "numpy"] = None,

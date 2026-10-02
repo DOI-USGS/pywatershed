@@ -10,6 +10,9 @@ from .prms_channel_flow_graph import (
     prms_segment_lateral_inflow_components_to_netcdf,
 )
 from .prms_groundwater import PRMSGroundwater
+from .prms_groundwater_cascades_no_dprst import (
+    PRMSGroundwaterCascadesNoDprst,
+)
 from .prms_groundwater_no_dprst import PRMSGroundwaterNoDprst
 from .prms_hydraulic_geometry import (
     PRMSHydraulicGeometryFull,
@@ -42,6 +45,7 @@ __all__ = (
     "PRMSCanopy",
     "PRMSChannel",
     "PRMSGroundwater",
+    "PRMSGroundwaterCascadesNoDprst",
     "PRMSGroundwaterNoDprst",
     "PRMSHydraulicGeometryFull",
     "PRMSHydraulicGeometryWidthOnly",

@@ -49,6 +49,11 @@ test_models = {
         pywatershed.PRMSSoilzoneCascadesNoDprst,
         pywatershed.PRMSGroundwaterNoDprst,
     ],
+    "sagehen": [
+        pywatershed.PRMSRunoffCascadesNoDprst,
+        pywatershed.PRMSSoilzoneCascadesNoDprst,
+        pywatershed.PRMSGroundwaterCascadesNoDprst,
+    ],
     "sagehen_gridded_cascades": [
         pywatershed.PRMSRunoffCascadesNoDprst,
         pywatershed.PRMSSoilzoneCascadesNoDprst,
@@ -69,6 +74,8 @@ not_output_by_prms = {
         "soil_rechr_change_hru",
     },
     pywatershed.PRMSGroundwater: set(),
+    # gw_upslope_hru is a pywatershed budget diagnostic, not a PRMS output
+    pywatershed.PRMSGroundwaterCascadesNoDprst: {"gw_upslope_hru"},
     pywatershed.PRMSChannel: {"inflow_ts_prev", "outflow_ts"},
 }
 
@@ -89,6 +96,7 @@ tol = {
     "PRMSSoilzoneCascadesNoDprst": 1.0e-8,
     "PRMSSoilzoneNoDprst": 1.0e-8,
     "PRMSGroundwater": 1.0e-8,
+    "PRMSGroundwaterCascadesNoDprst": 1.0e-8,
     "PRMSGroundwaterNoDprst": 1.0e-8,
     "PRMSChannel": 5.0e-7,
 }

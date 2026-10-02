@@ -4,12 +4,11 @@ Each process is run in isolation, forced by the PRMS output in the
 simulation's output directory. Which classes run is decided from the
 control file: PRMSSolarGeometry, PRMSAtmosphere, PRMSCanopy and PRMSSnow
 always; runoff/soilzone/groundwater as the plain, NoDprst or CascadesNoDprst
-variants from ``dprst_flag`` and ``cascade_flag``; PRMSChannel for the
-muskingum ``streamflow_module`` values (``strmflow`` has no routing and
-``strmflow_in_out`` has no channel parameters). Skipped for
-``cascadegw_flag`` (not implemented) and for GSFLOW/agricultural domains,
-which have their own restart tests (test_prms_runoff_ag_restart.py,
-test_prms_soilzone_ag_restart.py).
+variants from ``dprst_flag``, ``cascade_flag`` and ``cascadegw_flag``;
+PRMSChannel for the muskingum ``streamflow_module`` values (``strmflow`` has
+no routing and ``strmflow_in_out`` has no channel parameters). Skipped for
+GSFLOW/agricultural domains, which have their own restart tests
+(test_prms_runoff_ag_restart.py, test_prms_soilzone_ag_restart.py).
 
 Test strategy:
 - Run 1 "ac": starts at a, writes restart at b, ends at c
@@ -58,6 +57,7 @@ def get_processes(control: Control) -> list:
     opts = control.options
     dprst = bool(opts.get("dprst_flag", False))
     cascades = bool(opts.get("cascade_flag", False))
+    gw_cascades = bool(opts.get("cascadegw_flag", False))
 
     processes = [
         pws.PRMSSolarGeometry,
@@ -73,7 +73,11 @@ def get_processes(control: Control) -> list:
         processes += [
             pws.PRMSRunoffCascadesNoDprst,
             pws.PRMSSoilzoneCascadesNoDprst,
-            pws.PRMSGroundwaterNoDprst,
+            (
+                pws.PRMSGroundwaterCascadesNoDprst
+                if gw_cascades
+                else pws.PRMSGroundwaterNoDprst
+            ),
         ]
     else:
         processes += [
@@ -120,8 +124,6 @@ def get_control(
     control = load_control(simulation["control_file"])
     opts = control.options
 
-    if opts.get("cascadegw_flag", False):
-        pytest.skip("cascadegw_flag is active: not implemented in pywatershed")
     exe_desc = opts.get("executable_desc", ["prms"])[0].lower()
     if "gsflow" in exe_desc:
         pytest.skip("GSFLOW/ag domains have their own restart tests")

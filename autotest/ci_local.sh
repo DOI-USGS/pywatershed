@@ -400,6 +400,43 @@ if [ -z "${t}" ]; then
             test_prms_snow.py \
             test_prms_solar_geom.py \
             test_self_drive.py || exit 1
+
+        if [ -z "${g}" ]; then
+            echo
+            echo ".........."
+            echo "sagehen_5yr_cascades - generate and manage test data domain, "
+            echo "  run PRMS and convert csv output to NetCDF"
+            python generate_test_data.py \
+                -n=$pytest_n --domain=sagehen_5yr \
+                --control_pattern=sagehen.control \
+                --remove_prms_csvs --remove_prms_output_dirs || exit 1
+        fi
+
+        echo
+        echo ".........."
+        echo "sagehen_5yr_cascades - pywatershed tests"
+        echo ".........."
+        echo
+        pytest \
+            -vv \
+            -rs \
+            -n=$pytest_n \
+            -m "not domainless" \
+            --domain=sagehen_5yr \
+            --control_pattern=sagehen.control \
+            --durations=0 \
+            --error-for-skips \
+            test_preprocess_cascades.py \
+            test_prms_param_separate_cascades.py \
+            test_prms_above_snow.py \
+            test_prms_atmosphere.py \
+            test_prms_below_snow.py \
+            test_prms_canopy.py \
+            test_prms_groundwater.py \
+            test_restart_processes.py \
+            test_prms_snow.py \
+            test_prms_solar_geom.py \
+            test_self_drive.py || exit 1
     fi
 
     if [ -z "${c}" ]; then

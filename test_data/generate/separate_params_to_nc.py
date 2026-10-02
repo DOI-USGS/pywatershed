@@ -25,6 +25,8 @@ cascade_processes = [
     pws.PRMSRunoffCascadesNoDprst,
     pws.PRMSSoilzoneCascadesNoDprst,
 ]
+# only derivable from a control with cascadegw_flag set
+gw_cascade_processes = [pws.PRMSGroundwaterCascadesNoDprst]
 
 
 def separate_domain(domain_dir: pl.Path, cascades_only: bool) -> None:
@@ -36,23 +38,32 @@ def separate_domain(domain_dir: pl.Path, cascades_only: bool) -> None:
             out_dir=domain_dir,
         )
 
+    # one control per cascade process class suffices, the parameters are
+    # the same; the groundwater cascade class needs a control with
+    # cascadegw_flag set
+    written = set()
     for control_file in sorted(domain_dir.glob("*.control")):
         control = pws.Control.load_prms(
             control_file, warn_unused_options=False
         )
         if not control.options.get("cascade_flag", 0):
             continue
+        process_list = list(cascade_processes)
+        if control.options.get("cascadegw_flag", 0):
+            process_list += gw_cascade_processes
+        process_list = [pp for pp in process_list if pp not in written]
+        if not len(process_list):
+            continue
         print(f"cascade parameters from {control_file.name}")
         separate_domain_params_dis_to_ncdf(
             prms_param_file=param_file,
             domain_name=None,
             out_dir=domain_dir,
-            process_list=cascade_processes,
+            process_list=process_list,
             control=control,
             write_dis=False,
         )
-        # one cascade control per domain suffices, the parameters are the same
-        break
+        written.update(process_list)
 
 
 if __name__ == "__main__":
