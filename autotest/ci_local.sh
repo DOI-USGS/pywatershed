@@ -326,6 +326,7 @@ if [ -z "${t}" ]; then
             --control_pattern=sagehen_no_cascades.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_cbh_to_netcdf.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_control_read.py \
@@ -452,6 +453,7 @@ if [ -z "${t}" ]; then
             --control_pattern=nhm.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_domain_subset.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_mmr_to_mf6_dfw.py \
@@ -628,6 +630,7 @@ if [ -z "${t}" ]; then
             --control_pattern=nhm.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_netcdf_subset.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_obsin_flow_node.py \

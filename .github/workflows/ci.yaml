@@ -333,6 +333,7 @@ jobs:
           --cov=pywatershed
           --cov-report=xml
           --junitxml=pytest_sagehen_5yr_no_cascades.xml
+          --ignore=test_data_model.py
           --ignore=test_cbh_to_netcdf.py
           --ignore=test_prms_dyn_params.py
           --ignore=test_control_read.py
@@ -628,6 +629,7 @@ jobs:
           --cov=pywatershed
           --cov-report=xml
           --junitxml=pytest_hru_1_nhm.xml
+          --ignore=test_data_model.py
           --ignore=test_domain_subset.py
           --ignore=test_prms_dyn_params.py
           --ignore=test_mmr_to_mf6_dfw.py
@@ -1027,6 +1029,7 @@ jobs:
           --cov=pywatershed
           --cov-report=xml
           --junitxml=pytest_ucb_2yr_nhm.xml
+          --ignore=test_data_model.py
           --ignore=test_netcdf_subset.py
           --ignore=test_prms_dyn_params.py
           --ignore=test_obsin_flow_node.py

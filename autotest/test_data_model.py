@@ -10,7 +10,10 @@ import xarray as xr
 from pywatershed.base import data_model as dm
 from pywatershed.base.data_model import DatasetDict
 
-nc_file = pl.Path("../test_data/drb_2yr/prcp.nc")
+
+@pytest.fixture
+def nc_file(simulation):
+    return simulation["dir"] / "prcp.nc"
 
 
 # TODO: add more attributes to variables
@@ -81,8 +84,7 @@ def del_encodings(dd, keys):
 # tests below
 
 
-@pytest.mark.domainless
-def test_to_dd_identical():
+def test_to_dd_identical(nc_file):
     dd_xr = dm.xr_ds_to_dd(nc_file)  # pass the file
     dd_nc4 = dm.nc4_ds_to_dd(nc_file)
 
@@ -92,8 +94,7 @@ def test_to_dd_identical():
     np.testing.assert_equal(dd_xr, dd_nc4)
 
 
-@pytest.mark.domainless
-def test_xr_dd_xr(tmp_path):
+def test_xr_dd_xr(nc_file, tmp_path):
     tmp_path = pl.Path(tmp_path)
 
     # start with ds loaded: ds -> dd -> ds
@@ -129,8 +130,7 @@ def test_xr_dd_xr(tmp_path):
     return
 
 
-@pytest.mark.domainless
-def test_nc4_dd_nc4(tmp_path):
+def test_nc4_dd_nc4(nc_file, tmp_path):
     # pass the file and round trip it to file, compare via xarry
     out_file = pl.Path(tmp_path / "rt_1.nc")
     _ = dm.dd_to_nc4_ds(dm.nc4_ds_to_dd(nc_file), out_file)
