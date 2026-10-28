@@ -167,10 +167,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Set environment variables
         run: |
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
@@ -286,10 +282,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -299,20 +291,20 @@ jobs:
           pip -V
           pip list
 
-      - name: Compile PRMS 5.2.1
-        run: |
-          which gfortran
-          gfortran --version
-          which make
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1')"
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-sagehen_5yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: sagehen_5yr_no_cascades - generate and manage test data domain, run PRMS and convert csv output to NetCDF
+      - name: sagehen_5yr_no_cascades - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            --domain=sagehen_5yr \
-            --control_pattern=sagehen_no_cascades.control \
-            --remove_prms_csvs --remove_prms_output_dirs
+          python ../test_data/generate/oracle_fetch.py --domain=sagehen_5yr
+          python ../test_data/generate/oracle_populate.py --domain=sagehen_5yr \
+            --control_pattern=sagehen_no_cascades.control
 
       - name: sagehen_5yr_no_cascades - list netcdf input files
         working-directory: test_data
@@ -364,13 +356,14 @@ jobs:
           --ignore=test_source_sink_flow_node.py
           --ignore=test_starfit_flow_graph.py
 
-      - name: sagehen_5yr_no_gw_cascades - generate and manage test data domain, run PRMS and convert csv output to NetCDF
+      - name: sagehen_5yr_no_gw_cascades - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            --domain=sagehen_5yr \
-            --control_pattern=sagehen_no_gw_cascades.control \
-            --remove_prms_csvs --remove_prms_output_dirs
+          python ../test_data/generate/oracle_fetch.py --domain=sagehen_5yr
+          python ../test_data/generate/oracle_populate.py --domain=sagehen_5yr \
+            --control_pattern=sagehen_no_gw_cascades.control
 
       - name: sagehen_5yr_no_gw_cascades - list netcdf input files
         working-directory: test_data
@@ -460,10 +453,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -473,35 +462,20 @@ jobs:
           pip -V
           pip list
 
-      - name: Compile PRMS 5.2.1
-        run: |
-          which gfortran
-          gfortran --version
-          which make
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1')"
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-sagehen_gridded_5yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: sagehen_gridded_5yr - generate CBH forcing files with PRMS
+      - name: sagehen_gridded_5yr - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            --domain=sagehen_gridded_5yr \
-            --control_pattern=make_cbh_only
-
-      - name: sagehen_gridded_5yr - generate and manage test data domain, run PRMS and convert csv output to NetCDF
-        working-directory: autotest
-        run: |
-          python generate_test_data.py \
-            --domain=sagehen_gridded_5yr \
-            --control_pattern=sagehen_gridded_cascades.control \
-            --remove_prms_csvs --remove_prms_output_dirs
-
-      - name: sagehen_gridded_5yr - remove PRMS CBH day files (disk space)
-        working-directory: test_data
-        run: |
-          # the .day files (~600 MB) drive the PRMS runs above; the tests
-          # only read the netcdf CBH files (prcp/tmax/tmin.nc)
-          rm -f sagehen_gridded_5yr/*.day
-          df -h . || true
+          python ../test_data/generate/oracle_fetch.py --domain=sagehen_gridded_5yr
+          python ../test_data/generate/oracle_populate.py --domain=sagehen_gridded_5yr \
+            --control_pattern=sagehen_gridded_cascades.control
 
       - name: sagehen_gridded_5yr - list netcdf input files
         working-directory: test_data
@@ -597,13 +571,21 @@ jobs:
           pip -V
           pip list
 
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-hru_1-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
+
       - name: hru_1 - fetch the oracle answer set and populate test_data
         working-directory: autotest
         env:
           GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
           python ../test_data/generate/oracle_fetch.py --domain=hru_1
-          python ../test_data/generate/oracle_populate.py --domain=hru_1
+          python ../test_data/generate/oracle_populate.py --domain=hru_1 \
+            --control_pattern=nhm.control \
+            --control_pattern=frost.control
 
       - name: hru_1_nhm - list netcdf input files
         working-directory: test_data
@@ -729,10 +711,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Enforce MF6 ref and remote merge to main
         # need the code to update flopy but can get the binary
         # from nightly builds
@@ -779,20 +757,19 @@ jobs:
         run: |
           python pywatershed/utils/gis_files.py
 
-      - name: Compile PRMS 5.2.1 and 5.2.1.1
-        run: |
-          which gfortran
-          gfortran --version
-          which make
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1')"
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1.1')"
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-drb_2yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: drb_2yr all domains - generate and manage test data
+      - name: drb_2yr all configs - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            -n=auto --domain=drb_2yr \
-            --remove_prms_csvs --remove_prms_output_dirs
+          python ../test_data/generate/oracle_fetch.py --domain=drb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=drb_2yr
 
       - name: drb_2yr all domains - list netcdf input files
         working-directory: test_data
@@ -980,10 +957,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -993,21 +966,19 @@ jobs:
           pip -V
           pip list
 
-      - name: Compile PRMS 5.2.1
-        run: |
-          which gfortran
-          gfortran --version
-          which make
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1')"
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-ucb_2yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: ucb_2yr_nhm - generate and manage test data
+      - name: ucb_2yr_nhm - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            -n=auto \
-            --domain=ucb_2yr \
-            --remove_prms_csvs \
-            --remove_prms_output_dirs \
+          python ../test_data/generate/oracle_fetch.py --domain=ucb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=ucb_2yr \
             --control_pattern=nhm.control
 
       - name: ucb_2yr_nhm - list netcdf input files
@@ -1106,10 +1077,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -1119,23 +1086,21 @@ jobs:
           pip -V
           pip list
 
-      - name: Compile PRMS 5.2.1
-        run: |
-          which gfortran
-          gfortran --version
-          which make
-          python -c "import pywatershed as pws; pws.utils.compile_prms('5.2.1')"
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-ucb_2yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: ucb_2yr_slow_tests - generate and manage test data
+      - name: ucb_2yr_slow_tests - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            -n=auto \
-            --domain=ucb_2yr \
-            --remove_prms_csvs \
-            --remove_prms_output_dirs \
+          python ../test_data/generate/oracle_fetch.py --domain=ucb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=ucb_2yr \
             --control_pattern=nhm.control \
-            --control_pattern=transp_frost.control
+            --control_pattern=frost.control
 
       - name: ucb_2yr_slow_tests - list netcdf input files
         working-directory: test_data
@@ -1233,10 +1198,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -1267,68 +1228,19 @@ jobs:
               print(f'Contents: {os.listdir(addtl_dir)}')
           "
 
-      - name: Create symlink to fgr_ag_2yr domain
-        run: |
-          echo "Current directory: $(pwd)"
-          echo ""
-          python -c "
-          import os
-          import sys
-          import platform
-          import shutil
-          # Remove current directory from sys.path to avoid importing local source
-          # We want the installed package in site-packages, not repo source
-          if '' in sys.path:
-              sys.path.remove('')
-          if '.' in sys.path:
-              sys.path.remove('.')
-          cwd = os.getcwd()
-          if cwd in sys.path:
-              sys.path.remove(cwd)
-          # Now import pywatershed from site-packages
-          import pywatershed as pws
-          # Find pywatershed package location using __file__
-          pkg_dir = os.path.dirname(pws.__file__)
-          src = os.path.join(pkg_dir, 'data', 'pywatershed_addtl_domains', 'fgr_ag_2yr')
-          dst = 'test_data/fgr_ag_2yr'
-          print(f'Platform: {platform.system()}')
-          print(f'Package directory: {pkg_dir}')
-          print(f'Source path: {src}')
-          print(f'Source exists: {os.path.exists(src)}')
-          print(f'Destination path: {dst}')
-          print(f'Destination absolute: {os.path.abspath(dst)}')
-          if not os.path.exists(src):
-              print(f'ERROR: Source path does not exist!')
-              print(f'Checking pywatershed/data:')
-              data_dir = os.path.join(pkg_dir, 'data')
-              if os.path.exists(data_dir):
-                  print(f'Contents: {os.listdir(data_dir)}')
-              sys.exit(1)
-          if os.path.exists(dst):
-              print(f'Removing existing destination')
-              if os.path.islink(dst) or os.path.isfile(dst):
-                  os.unlink(dst)
-              else:
-                  shutil.rmtree(dst)
-          # On Windows, copy instead of symlink (symlinks require special privileges)
-          if platform.system() == 'Windows':
-              print(f'Copying directory (Windows)')
-              shutil.copytree(src, dst)
-          else:
-              print(f'Creating symlink (Unix)')
-              os.symlink(src, dst, target_is_directory=True)
-          print(f'Link/copy created successfully')
-          print(f'Destination exists (after): {os.path.exists(dst)}')
-          "
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-fgr_ag_2yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: fgr_ag_2yr all configs - generate and manage test data
+      - name: fgr_ag_2yr all configs - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            -n=auto \
-            --domain=fgr_ag_2yr \
-            --remove_prms_csvs \
-            --remove_prms_output_dirs \
+          python ../test_data/generate/oracle_fetch.py --domain=fgr_ag_2yr
+          python ../test_data/generate/oracle_populate.py --domain=fgr_ag_2yr \
             --control_pattern=spinup.control \
             --control_pattern=analysis.control
 
@@ -1431,10 +1343,6 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
 
-      - name: Link conda gfortran dylibs on Mac
-        if: runner.os == 'macOS'
-        run: .github/scripts/symlink_gfortran_mac.sh
-
       - name: Install pywatershed
         run: |
           pip install .
@@ -1465,68 +1373,19 @@ jobs:
               print(f'Contents: {os.listdir(addtl_dir)}')
           "
 
-      - name: Create symlink to fgr_ag_2yr domain
-        run: |
-          echo "Current directory: $(pwd)"
-          echo ""
-          python -c "
-          import os
-          import sys
-          import platform
-          import shutil
-          # Remove current directory from sys.path to avoid importing local source
-          # We want the installed package in site-packages, not repo source
-          if '' in sys.path:
-              sys.path.remove('')
-          if '.' in sys.path:
-              sys.path.remove('.')
-          cwd = os.getcwd()
-          if cwd in sys.path:
-              sys.path.remove(cwd)
-          # Now import pywatershed from site-packages
-          import pywatershed as pws
-          # Find pywatershed package location using __file__
-          pkg_dir = os.path.dirname(pws.__file__)
-          src = os.path.join(pkg_dir, 'data', 'pywatershed_addtl_domains', 'fgr_ag_2yr')
-          dst = 'test_data/fgr_ag_2yr'
-          print(f'Platform: {platform.system()}')
-          print(f'Package directory: {pkg_dir}')
-          print(f'Source path: {src}')
-          print(f'Source exists: {os.path.exists(src)}')
-          print(f'Destination path: {dst}')
-          print(f'Destination absolute: {os.path.abspath(dst)}')
-          if not os.path.exists(src):
-              print(f'ERROR: Source path does not exist!')
-              print(f'Checking pywatershed/data:')
-              data_dir = os.path.join(pkg_dir, 'data')
-              if os.path.exists(data_dir):
-                  print(f'Contents: {os.listdir(data_dir)}')
-              sys.exit(1)
-          if os.path.exists(dst):
-              print(f'Removing existing destination')
-              if os.path.islink(dst) or os.path.isfile(dst):
-                  os.unlink(dst)
-              else:
-                  shutil.rmtree(dst)
-          # On Windows, copy instead of symlink (symlinks require special privileges)
-          if platform.system() == 'Windows':
-              print(f'Copying directory (Windows)')
-              shutil.copytree(src, dst)
-          else:
-              print(f'Creating symlink (Unix)')
-              os.symlink(src, dst, target_is_directory=True)
-          print(f'Link/copy created successfully')
-          print(f'Destination exists (after): {os.path.exists(dst)}')
-          "
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-fgr_ag_2yr-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
 
-      - name: fgr_ag_2yr_subset2 all configs - generate and manage test data
+      - name: fgr_ag_2yr all configs - fetch the oracle answer set and populate test_data
         working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python generate_test_data.py \
-            -n=auto \
-            --domain=fgr_ag_2yr \
-            --remove_prms_csvs \
-            --remove_prms_output_dirs \
+          python ../test_data/generate/oracle_fetch.py --domain=fgr_ag_2yr
+          python ../test_data/generate/oracle_populate.py --domain=fgr_ag_2yr \
             --control_pattern=spinup.control \
             --control_pattern=analysis.control
 

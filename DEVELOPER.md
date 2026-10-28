@@ -120,6 +120,23 @@ The automated practices of installing, linting, and testing described below are
 all formally encoded in `.github/workflows/ci.yaml` and
 `.github/workflows/ci_examples.yaml` files.
 
+CI does not compile PRMS. Each domain test job downloads its domain's pinned
+answer set from the pws-prms-oracle releases with
+`test_data/generate/oracle_fetch.py` and populates `test_data/` from it with
+`oracle_populate.py` (see Testing below). The oracle repository is internal,
+so the fetch step passes the `PWS_ORACLE_TOKEN` repository secret -- a
+classic personal access token with the `repo` scope, SSO-authorized for
+DOI-USGS -- as `GITHUB_TOKEN`. Two consequences:
+
+- `pull_request` runs from a fork do not receive secrets, so the domain jobs
+  of a fork PR fail at the fetch. Push feature branches to this repository.
+- When the token expires or is revoked, every domain job fails at the fetch.
+  Replace the secret with a new token (or drop it, once the oracle is public).
+
+The downloaded assets are cached per domain and platform (`actions/cache`,
+keyed on `autotest/prms_oracle.toml`): a pin bump re-downloads, nothing else
+does.
+
 CI runs at two levels. Pushes to any branch — in this repository or on a fork —
 run a skeleton: installs, linting, domainless tests, the documentation build,
 and the example notebooks on ubuntu only. The full suite (the domain test jobs

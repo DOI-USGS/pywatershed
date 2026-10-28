@@ -54,11 +54,11 @@ New Features
 - The gridded ``sagehen_gridded_5yr`` test domain generates its own CBH
   forcing files with PRMS from its two-station data file (the 5609-cell
   text files are ~600 MB, too large to distribute), making it fully
-  reproducible from a clean clone. For this, the CBH writer in
-  ``prms_src`` (``write_climate_hru.f90``) is patched to write full
-  precision (``G0`` format in place of ``E12.4``), so the forcing
-  pywatershed reads carries the values PRMS computed rather than
-  four-digit roundings. (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
+  reproducible from a clean clone. For this, PRMS's CBH writer
+  (``write_climate_hru.f90``, now in the pws-prms-oracle repository) is
+  patched to write full precision (``G0`` format in place of ``E12.4``),
+  so the forcing pywatershed reads carries the values PRMS computed
+  rather than four-digit roundings. (:pull:`407`) By `James McCreight <https://github.com/jmccreight>`_.
 - Reading a PRMS parameter file expands the compact forms PRMS allows to
   the full shape pywatershed expects: a parameter given on ``nmonth``
   alone is broadcast to ``(nmonth, nhru)``, and ``tmax_adj`` and
@@ -196,6 +196,19 @@ Bug fixes
 
 Internal changes
 ~~~~~~~~~~~~~~~~
+- Test answers come from the pws-prms-oracle repository instead of PRMS
+  runs in this one. ``prms_src/``, the checked-in GSFLOW binaries,
+  ``pywatershed.utils.prms_exe_utils`` (``compile_prms``, ``run_prms`` and
+  friends) and ``autotest/generate_test_data.py`` are removed; the CI
+  workflow and the environment files no longer need a Fortran compiler.
+  ``autotest/prms_oracle.toml`` pins one answer set per domain, control file
+  and platform; ``test_data/generate/oracle_fetch.py`` downloads the pinned
+  release assets (or ``PWS_ORACLE_DIR`` names a local oracle clone) and
+  ``oracle_populate.py`` lays them out under ``test_data/``, which is now
+  gitignored. In CI the fetch authenticates with the ``PWS_ORACLE_TOKEN``
+  repository secret and the assets are cached per domain and platform.
+  See DEVELOPER.md (Testing, CI) and ``test_data/README.md``.
+  (:pull:`XXX`) By `James McCreight <https://github.com/jmccreight>`_.
 - The public API surface (exports, ``__init__`` signatures, declared
   input/variable/parameter name sets, control options, and variable/parameter
   metadata) is snapshotted in ``autotest/api_surface.txt``,
