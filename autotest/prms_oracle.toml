@@ -13,105 +13,105 @@
 # A local clone's `oracle_key --all` matches only at the published commit.
 
 [inputs]
-hru_1 = "1b767fe6181a06a6"
+hru_1 = "970e228f8a07ec20"
 drb_2yr = "19f6e77bb6f4b748"
-ucb_2yr = "9a3fb38543968c50"
-sagehen_5yr = "172121b284ff1c6a"
+ucb_2yr = "54cb23af4448606b"
+sagehen_5yr = "9d6c09518cdb4b12"
 sagehen_gridded_5yr = "58dada9023a0c427"
 fgr_ag_2yr = "c3ceb0ae8cb990dc"
 
 [outputs."hru_1/nhm"]  # output/
-linux-x86_64 = "1549e5bceb22fefa"
-macos-arm64 = "60d4ec0f2bf609ec"
-windows-x86_64 = "0e72677d5a4facca"
+linux-x86_64 = "6f6ed8bfaeaa2501"
+macos-arm64 = "d6777b87aed24e68"
+windows-x86_64 = "09d7d19bb6f7a760"
 
 [outputs."hru_1/nhm_no_dprst"]  # output_no_dprst/
-linux-x86_64 = "99d609e824f33dde"
-macos-arm64 = "93692966444fb928"
-windows-x86_64 = "9536723ca8b9ffff"
+linux-x86_64 = "56674253b421b2b7"
+macos-arm64 = "2f26f36a14ef4b3f"
+windows-x86_64 = "a9f02ee26407db42"
 
 [outputs."hru_1/nhm_transp_frost"]  # output_transp_frost/
-linux-x86_64 = "dabed65027ce8cb1"
-macos-arm64 = "dc9e9f8db5703ad7"
-windows-x86_64 = "a81613bbf38c625c"
+linux-x86_64 = "6cb8bd8055152599"
+macos-arm64 = "6f78786d76e75123"
+windows-x86_64 = "c37b7a2f4738fac8"
 
 [outputs."drb_2yr/nhm"]  # output/
-linux-x86_64 = "039ac2b2136360b8"
-macos-arm64 = "93d5032b0450b193"
-windows-x86_64 = "9647eda3e0e608e0"
+linux-x86_64 = "33049a7057077ffd"
+macos-arm64 = "db45d990c56696b2"
+windows-x86_64 = "4fc813b918856b7c"
 
 [outputs."drb_2yr/nhm_no_dprst"]  # output_no_dprst/
-linux-x86_64 = "880679a7aae597b8"
-macos-arm64 = "90ba5293f2c51ad1"
-windows-x86_64 = "55d56a3cffcc70d0"
+linux-x86_64 = "ff30cb2e0ae3ee02"
+macos-arm64 = "c02081648c2282af"
+windows-x86_64 = "0c088462c238b479"
 
 [outputs."drb_2yr/nhm_obsin"]  # output_nhm_obsin/
-linux-x86_64 = "aabc4d89ed298c75"
-macos-arm64 = "b5b4dcf8c874e7ef"
-windows-x86_64 = "d976801bd5936523"
+linux-x86_64 = "2dc41367b7e91dbf"
+macos-arm64 = "47a9e0e4511becae"
+windows-x86_64 = "50b20ec68a9ba85e"
 
 [outputs."drb_2yr/nhm_stream_temp"]  # output_stream_temp/
-linux-x86_64 = "bc64361736b6a0d2"
-macos-arm64 = "47d120d483b4958f"
-windows-x86_64 = "d3e1f6b9678354ea"
+linux-x86_64 = "d44ecce4ca84dcdc"
+macos-arm64 = "f104762e447ade61"
+windows-x86_64 = "1e1cd006e12f5755"
 
 [outputs."drb_2yr/nhm_stream_temp_seg_humid_matrix"]  # output_stream_temp_seg_humid_matrix/
-linux-x86_64 = "d840b67301ca9b44"
-macos-arm64 = "140042cc6ddca8af"
-windows-x86_64 = "2d530b6022f985f0"
+linux-x86_64 = "c6a2f463bd75ff22"
+macos-arm64 = "564906aa79b596bb"
+windows-x86_64 = "821d0b82cc58f0c2"
 
 [outputs."drb_2yr/nhm_stream_temp_seg_humid_scalar"]  # output_stream_temp_seg_humid_scalar/
-linux-x86_64 = "719d31c1009118bb"
-macos-arm64 = "e6ccdf8054aeeb24"
-windows-x86_64 = "d06051d313092402"
+linux-x86_64 = "7ff0283779d2f2c1"
+macos-arm64 = "934f65134e765980"
+windows-x86_64 = "85f31d8f8a2709d9"
 
 [outputs."drb_2yr/nhm_transp_frost"]  # output_transp_frost/
-linux-x86_64 = "3bafd465b49c1122"
-macos-arm64 = "7dc86e45d06c715e"
-windows-x86_64 = "1a43bb25e16dbb2d"
+linux-x86_64 = "0f990fd7ff299267"
+macos-arm64 = "c6deff5710fbaf51"
+windows-x86_64 = "05b73cbdcda4e692"
 
 [outputs."ucb_2yr/nhm"]  # output/
-linux-x86_64 = "1fbdd53b6f784fa8"
-macos-arm64 = "7bf7ed725b865053"
-windows-x86_64 = "47ddc417a04718b1"
+linux-x86_64 = "b9616c7e7176dfa9"
+macos-arm64 = "545f23872fadcc48"
+windows-x86_64 = "c74f2afd8c4e8d43"
 
 [outputs."ucb_2yr/nhm_no_dprst"]  # output_no_dprst/
-linux-x86_64 = "138bf50a73793f8b"
-macos-arm64 = "294c6291e7089b46"
-windows-x86_64 = "60a8b89fb2e54c7b"
+linux-x86_64 = "e325d776bd26e0c8"
+macos-arm64 = "4103c3fc2e7e0b0e"
+windows-x86_64 = "b33ac7ff7233d48c"
 
 [outputs."ucb_2yr/nhm_transp_frost"]  # output_transp_frost/
-linux-x86_64 = "b029cc6e9bbf802e"
-macos-arm64 = "1e71047db03b323f"
-windows-x86_64 = "3d6dbb5f6837a387"
+linux-x86_64 = "389206373b9ff931"
+macos-arm64 = "0f3e5c710876e78b"
+windows-x86_64 = "a525dc836209fca5"
 
 [outputs."sagehen_5yr/sagehen_no_cascades"]  # output_no_cascades/
-linux-x86_64 = "b41963ec9902ca1b"
-macos-arm64 = "ea1409773efea831"
-windows-x86_64 = "fac66ca91a025e26"
+linux-x86_64 = "dacf76987dd53882"
+macos-arm64 = "2ba5b873daceddbc"
+windows-x86_64 = "bf0a928a833ef3cd"
 
 [outputs."sagehen_5yr/sagehen_no_gw_cascades"]  # output_no_gw_cascades/
-linux-x86_64 = "dc92aa14f3d0efaf"
-macos-arm64 = "6e372a276dd007f7"
-windows-x86_64 = "4f144d60078371f0"
+linux-x86_64 = "76cc4ec7aa402be2"
+macos-arm64 = "b87d8b20903f1f4c"
+windows-x86_64 = "4065f64b375b8f9d"
 
 # writes the domain's CBH forcing (prcp.nc, tmax.nc, tmin.nc), not answers
 [outputs."sagehen_gridded_5yr/sagehen_gridded_cascades_make_cbh_only"]
-linux-x86_64 = "ee3c06dfce463dba"
-macos-arm64 = "38010b009a51b8d8"
-windows-x86_64 = "d5317dfc3a0fc3f7"
+linux-x86_64 = "f298c511456b6350"
+macos-arm64 = "a0252c6a988f1105"
+windows-x86_64 = "4466d0aee18b4213"
 
 [outputs."sagehen_gridded_5yr/sagehen_gridded_cascades"]  # output_cascades/
-linux-x86_64 = "318aebbc4a959808"
-macos-arm64 = "f9e17691850ffbac"
-windows-x86_64 = "4edaffef475fa07e"
+linux-x86_64 = "a6eadd4f479ee230"
+macos-arm64 = "85b715c4f6b7138d"
+windows-x86_64 = "551c0685e880ed44"
 
 [outputs."fgr_ag_2yr/spinup"]  # output_spinup/
-linux-x86_64 = "a2f0a731d51923a8"
-macos-arm64 = "593a58da4fa3eb36"
-windows-x86_64 = "85456577ad4bdc18"
+linux-x86_64 = "435a626c51a306f9"
+macos-arm64 = "81ec6c9b8e9e7c55"
+windows-x86_64 = "15dfec15ad906ec1"
 
 [outputs."fgr_ag_2yr/analysis"]  # output_analysis/
-linux-x86_64 = "b46f2ae5ca6a766c"
-macos-arm64 = "2b4fc9394ab4100d"
-windows-x86_64 = "f735a9be344985d0"
+linux-x86_64 = "c9125014c84beae2"
+macos-arm64 = "b1863e271f4fae01"
+windows-x86_64 = "6ed23cc9c055cf36"
