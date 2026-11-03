@@ -725,6 +725,10 @@ if [ -z "${n}" ]; then
     echo "******************************"
     echo
 
+    # the domains the notebooks read (03/04/08/09: drb_2yr, 11: sagehen_5yr)
+    populate_from_oracle drb_2yr || exit 1
+    populate_from_oracle sagehen_5yr || exit 1
+
     cd ..
     echo "Get GIS files for notebooks"
     python -m pywatershed.utils.gis_files || exit 1

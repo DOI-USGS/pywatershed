@@ -77,6 +77,16 @@ def oracle_root() -> pl.Path:
     return root
 
 
+def unlink(path: pl.Path) -> None:
+    """Remove path if present. Copies of the oracle's files are read-only
+    (copy2 keeps the 0o444), and Windows refuses to unlink a read-only
+    file, so make it writable first."""
+    if path.is_symlink() or path.exists():
+        if not path.is_symlink():
+            path.chmod(0o644)
+        path.unlink()
+
+
 def link_or_copy(src: pl.Path, dst: pl.Path, force: bool) -> str:
     """Symlink src at dst, copying when symlinks are unavailable.
     Returns what was done. An existing regular file is left alone unless
@@ -88,7 +98,7 @@ def link_or_copy(src: pl.Path, dst: pl.Path, force: bool) -> str:
     elif dst.exists():
         if not force:
             return "regular file kept"
-        dst.unlink()
+        unlink(dst)
     try:
         os.symlink(src, dst)
         return "linked"
@@ -99,9 +109,8 @@ def link_or_copy(src: pl.Path, dst: pl.Path, force: bool) -> str:
 
 def copy_marker(src_dir: pl.Path, dst_dir: pl.Path, name: str) -> None:
     src = src_dir / name
-    # the oracle's markers are read-only; copy2 keeps that mode, so a
-    # second populate must remove the copy before rewriting it
-    (dst_dir / name).unlink(missing_ok=True)
+    # a second populate must remove the read-only copy before rewriting it
+    unlink(dst_dir / name)
     if src.exists():
         shutil.copy2(src, dst_dir / name)
     else:
