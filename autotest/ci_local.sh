@@ -725,8 +725,11 @@ if [ -z "${n}" ]; then
     echo "******************************"
     echo
 
-    # the domains the notebooks read (03/04/08/09: drb_2yr, 11: sagehen_5yr)
+    # the domains the notebooks read from test_data/ (00-08: drb_2yr,
+    # 09: ucb_2yr, 11: sagehen_5yr; 09 and 10 also use the additional
+    # domain files below)
     populate_from_oracle drb_2yr || exit 1
+    populate_from_oracle ucb_2yr || exit 1
     populate_from_oracle sagehen_5yr || exit 1
 
     cd ..

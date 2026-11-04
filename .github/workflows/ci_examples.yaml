@@ -90,8 +90,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
         run: |
-          python ../test_data/generate/oracle_fetch.py --domain=drb_2yr --domain=sagehen_5yr
+          python ../test_data/generate/oracle_fetch.py --domain=drb_2yr --domain=ucb_2yr --domain=sagehen_5yr
           python ../test_data/generate/oracle_populate.py --domain=drb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=ucb_2yr
           python ../test_data/generate/oracle_populate.py --domain=sagehen_5yr
 
       - name: Run tests
