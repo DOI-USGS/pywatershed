@@ -479,6 +479,8 @@ def test_mmr_to_mf6_dfw_regression(simulation, tmp_path):
         flow_all[tt, :] = get_outflow(tt)
 
     for kk, vv in answers_regression_means.items():
-        abs_diff = abs(locals()[kk].mean() - vv)
+        # Relative: mf6 nightlies on linux/windows drift from these
+        # (mac-generated) means by ~4e-6 relative (Nov 2026).
+        rel_diff = abs(locals()[kk].mean() - vv) / abs(vv)
 
-        assert abs_diff < 1e-5, f"results for {kk} are not close"
+        assert rel_diff < 1e-5, f"results for {kk} are not close"
