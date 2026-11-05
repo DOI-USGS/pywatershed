@@ -702,10 +702,13 @@ class MmrToMf6Dfw:
                         bin_name_pl.parent.mkdir()
                     _ = ra.tofile(bin_name_pl)
 
+                    # No "data" key: the file is already written above, and
+                    # flopy's pandas list path (used once mf6 marked chf-flw
+                    # a stress-package, 2026-06) rejects "data": None before
+                    # flopy 3.11.
                     flw_spd[ispd] = {
                         "filename": str(bin_name),
                         "binary": True,
-                        "data": None,
                     }
 
                 else:
