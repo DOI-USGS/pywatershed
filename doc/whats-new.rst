@@ -217,7 +217,7 @@ Internal changes
   gitignored. In CI the fetch authenticates with the ``PWS_ORACLE_TOKEN``
   repository secret and the assets are cached per domain and platform.
   See DEVELOPER.md (Testing, CI) and ``test_data/README.md``.
-  (:pull:`XXX`) By `James McCreight <https://github.com/jmccreight>`_.
+  (:pull:`425`) By `James McCreight <https://github.com/jmccreight>`_.
 - The public API surface (exports, ``__init__`` signatures, declared
   input/variable/parameter name sets, control options, and variable/parameter
   metadata) is snapshotted in ``autotest/api_surface.txt``,
