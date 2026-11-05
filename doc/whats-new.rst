@@ -149,7 +149,7 @@ Bug fixes
   ``"data": None`` placeholder before flopy 3.11. The placeholder is
   dropped (the binary files are written by pywatershed; flopy only needs
   the filename), which works on every flopy version.
-  (:pull:`XXX`) By `James McCreight <https://github.com/jmccreight>`_.
+  (:pull:`424`) By `James McCreight <https://github.com/jmccreight>`_.
 - :class:`~utils.netcdf_utils.NetCdfWrite` silently dropped a string
   coordinate whose maximum length matched an earlier string coordinate's
   (the two share a ``char<N>`` dimension, and the guard against creating
