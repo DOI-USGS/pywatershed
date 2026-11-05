@@ -80,7 +80,9 @@ class Source:
     def __init__(self, repo: str, directory: str | None):
         self.repo = repo
         self.directory = pl.Path(directory).expanduser() if directory else None
-        self.token = os.environ.get("GITHUB_TOKEN")
+        # empty counts as unset: a fork PR's CI step maps a secret it
+        # cannot see to ""
+        self.token = os.environ.get("GITHUB_TOKEN") or None
         self._releases: dict[str, dict] = {}
 
     def _api(self, url: str, accept: str) -> urllib.request.Request:
