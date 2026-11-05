@@ -141,6 +141,15 @@ Breaking Changes
 
 Bug fixes
 ~~~~~~~~~
+- :class:`~utils.mmr_to_mf6_dfw.MmrToMf6Dfw` with ``bc_binary_files=True``
+  failed in ``flopy.mf6.ModflowChfflw`` with ``Data list
+  stress_period_data is an unsupported type: <class 'NoneType'>`` once
+  MODFLOW 6 marked ``chf-flw`` a stress package (June 2026), which routes
+  its period data through flopy's pandas list; that path rejected the
+  ``"data": None`` placeholder before flopy 3.11. The placeholder is
+  dropped (the binary files are written by pywatershed; flopy only needs
+  the filename), which works on every flopy version.
+  (:pull:`424`) By `James McCreight <https://github.com/jmccreight>`_.
 - :class:`~utils.netcdf_utils.NetCdfWrite` silently dropped a string
   coordinate whose maximum length matched an earlier string coordinate's
   (the two share a ``char<N>`` dimension, and the guard against creating
