@@ -151,3 +151,24 @@ def test_compare_prms(
         )
 
     return
+
+
+def test_dprst_flag_default_true(simulation, control, discretization):
+    """With dprst_flag given by neither the constructor nor the control,
+    PRMSRunoff defaults to depression storage on, like PRMSSoilzone and
+    PRMSGroundwater. It used to end up None (silently off) because
+    _set_options ran after the default was applied."""
+    control.options.pop("dprst_flag", None)
+    param_file = simulation["dir"] / control.options["parameter_file"]
+    parameters = PrmsParameters.load(param_file)
+    input_variables = {
+        key: simulation["output_dir"] / f"{key}.nc"
+        for key in PRMSRunoff.get_inputs()
+    }
+    runoff = PRMSRunoff(
+        control=control,
+        discretization=discretization,
+        parameters=parameters,
+        **input_variables,
+    )
+    assert runoff._dprst_flag is True
