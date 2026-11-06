@@ -214,7 +214,8 @@ identical from review to review — and (B) the harness's built-in
    findings first (they are cheap to fix and objective), then
    correctness findings ranked by severity. For each finding quote the
    offending code, not a description of it. Where a reference
-   implementation exists (the PRMS Fortran under `prms_src/`), quote
+   implementation exists (the PRMS Fortran in the pws-prms-oracle
+   repository's `prms_src/`), quote
    the corresponding lines alongside. State explicitly when a layer
    found nothing, and list what was checked and cleared — a reader
    needs to know what the review looked at and did not flag. Write

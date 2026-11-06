@@ -6,13 +6,19 @@ was restarted from a saved state.
 
 Test Domains
 ------------
-Two test domains are used (configured via pytest fixtures):
+The shipped/CI domain is **fgr_ag_2yr** (populated
+into test_data/ from the oracle by test_data/generate/oracle_populate.py;
+this module skips all other domains), with two configurations:
 
-1. **ucb_ag_spinup_2yr** (open-loop): Tests restart with basic dual-area
+1. **spinup.control** (open-loop): Tests restart with basic dual-area
    soil moisture accounting without iterative AET matching.
 
-2. **ucb_ag_analysis_2yr** (closed-loop): Tests restart with full iterative
+2. **analysis.control** (closed-loop): Tests restart with full iterative
    AET matching with observed AET data.
+
+(The tests were developed on the original larger UCB domains,
+ucb_ag_spinup_2yr / ucb_ag_analysis_2yr -- too large for CI; may
+return.)
 
 Test Strategy
 -------------

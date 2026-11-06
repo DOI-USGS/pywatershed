@@ -1,7 +1,7 @@
 # Developing `pywatershed`
 
 This document describes how to set up a development environment, install
-dependencies, compile C/Fortran code, generate example data, and run the tests
+dependencies, generate example data, and run the tests
 and example notebooks.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -15,11 +15,13 @@ and example notebooks.
       - [Mamba](#mamba)
       - [Pip](#pip)
     - [Installing `pywatershed` in development mode](#installing-pywatershed-in-development-mode)
-    - [F2PY](#f2py)
 - [Branching model](#branching-model)
 - [Maintenance ledger](#maintenance-ledger)
 - [CI](#ci)
 - [Testing](#testing)
+  - [Step 1: get the answers](#step-1-get-the-answers)
+  - [Step 2: run the tests](#step-2-run-the-tests)
+  - [Running pieces by hand](#running-pieces-by-hand)
 - [Linting](#linting)
 - [Committing Jupyter Notebooks](#committing-jupyter-notebooks)
 - [pre-commit hooks](#pre-commit-hooks)
@@ -40,23 +42,12 @@ is a good source of information.
 
 ### Compilers
 
-C and Fortran compilers are required. We use gnu (gcc, gfortran)
-exclusively, on Windows, Linux, and Apple Silicon MacOS. The mamba/conda
-environment described below supplies them (`gfortran>=15.2.0` in
-`environment.yml`), so no separate compiler installation is needed.
-Compilers are needed for compiling and running C/Fortran PRMS code to generate testing/verification data.
+Compilers are optional. `pywatershed` itself is pure Python.
 
-The PRMS binaries used to generate test data are not kept in the
-repository. They are compiled from `prms_src/` the first time they are
-needed, by `pywatershed.utils.compile_prms()`, and written to `bin/`
-(which is gitignored for these). `autotest/ci_local.sh` and `ci.yaml` call
-the same function, so there is one build path everywhere.
-
-Intel compilers (icc, ifort) are no longer used or supported, and Intel
-MacOS is no longer detected. GSFLOW source is not part of this
-repository, so its binaries are checked in rather than compiled: three
-gfortran double-precision builds (macOS arm64, Linux, Windows), all from
-the same GSFLOW commit and CI run — see `bin/README.md` for provenance.
+- The test answers are PRMS output. They are produced in a separate
+  repository, `pws-prms-oracle`, and published as release assets.
+  Producing them needs a Fortran compiler; downloading a released set
+  does not. See [Testing](#testing).
 
 ### Python
 
@@ -106,27 +97,6 @@ with:
 
 `pip install -e . `
 
-#### F2PY
-
-The numpy extension F2PY is used to provide fortran compiled kernels of core
-calculations to boost performance. F2PY is documented [within
-numpy](https://numpy.org/doc/stable/f2py/index.html). This repository is
-configured NOT to compile on install by default. Currently, we have not
-established this compilation procedure for Windows. On Linux and MacOS,
-compilation of fortran kernels on package installation is achieved by setting
-several environent variables before installing the `pywatershed` module. For
-instance, from the project root:
-
-```
-export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
-export CC=path/to/gcc  # for example
-export FC=path/to/gfortran  # for example
-export PYWS_FORTRAN=true
-pip install -e .
-```
-
-Note that an editable (`-e` above) is required to compile the fotran code.
-
 ## Branching model
 
 This project uses the [git
@@ -149,6 +119,23 @@ them live and reports what is actionable.
 The automated practices of installing, linting, and testing described below are
 all formally encoded in `.github/workflows/ci.yaml` and
 `.github/workflows/ci_examples.yaml` files.
+
+CI does not compile PRMS. Each domain test job downloads its domain's pinned
+answer set from the pws-prms-oracle releases with
+`test_data/generate/oracle_fetch.py` and populates `test_data/` from it with
+`oracle_populate.py` (see Testing below). The oracle repository is internal,
+so the fetch step passes the `PWS_ORACLE_TOKEN` repository secret -- a
+classic personal access token with the `repo` scope, SSO-authorized for
+DOI-USGS -- as `GITHUB_TOKEN`. Two consequences:
+
+- `pull_request` runs from a fork do not receive secrets, so the domain jobs
+  of a fork PR fail at the fetch. Push feature branches to this repository.
+- When the token expires or is revoked, every domain job fails at the fetch.
+  Replace the secret with a new token (or drop it, once the oracle is public).
+
+The downloaded assets are cached per domain and platform (`actions/cache`,
+keyed on `autotest/prms_oracle.toml`): a pin bump re-downloads, nothing else
+does.
 
 CI runs at two levels. Pushes to any branch — in this repository or on a fork —
 run a skeleton: installs, linting, domainless tests, the documentation build,
@@ -209,30 +196,92 @@ Notes for maintaining the gates in `ci.yaml`:
 
 ## Testing
 
-Once the dependencies are available, we want to verify the software by running
-its test suite. However, we first need to generate the test data. This consists
-of running binaries (PRMS) and then converting the output to netcdf files used
-by autotest as the answers or reference results. In the `autotest/` directory,
-test data is generated using the following command.
+The tests compare `pywatershed` to reference answers (PRMS output). The
+answers come from a separate repository,
+[pws-prms-oracle](https://github.com/DOI-USGS/pws-prms-oracle) ("the
+oracle"). Its `domains/<domain>/` directories hold each test watershed's
+inputs and, under `output*/`, the answers.
+
+### Step 1: get the answers
+
+Choose one.
+
+**A. Use a published release** (no compiler needed)
+
+The oracle repository is internal to DOI-USGS, so you need a GitHub
+token that can read it. Create a classic personal access token with the
+`repo` scope, authorize it for the DOI-USGS organization (SSO), and:
 
 ```shell
-python generate_test_data.py -n=auto
+export GITHUB_TOKEN=<token>
 ```
 
-Additional options may be supplied to `generate_test_data.py`. For more details
-on generating the test data, see [`test_data/README.md`](test_data/README.md).
+`autotest/ci_local.sh` then downloads the pinned release assets into
+`test_data/.oracle/` (gitignored) the first time it runs. The pins are
+in `autotest/prms_oracle.toml`.
 
-Finally, the tests can be run from the `autotest` directory:
+**B. Generate locally** (Fortran compiler needed)
+
+1. Clone the oracle:
+
+   ```shell
+   git clone https://github.com/DOI-USGS/pws-prms-oracle /path/to/pws-prms-oracle
+   ```
+
+2. Follow the oracle's `README.md` to build PRMS and run every domain.
+   Answers (`output*/`) are never committed; this step creates them.
+
+3. Tell `pywatershed` where they are:
+
+   ```shell
+   export PWS_ORACLE_DIR=/path/to/pws-prms-oracle/domains
+   ```
+
+   `pywatershed` only reads this directory. Several clones can share it.
+   Unset, it means `test_data/.oracle/` (option A).
+
+### Step 2: run the tests
+
+From `autotest/`:
 
 ```shell
-pytest -v -n=auto
+./ci_local.sh
 ```
 
-All tests should pass, XPASS, or XFAIL. XFAIL is an expected
-failure. The flag `-n auto` to automatically use all available cores on your
-machine.
+For every domain it:
 
-For more details on the autotests, see [`autotest/README.md`](autotest/README.md).
+1. Populates `test_data/<domain>/` from the answers: links to the inputs
+   and answers (copies on Windows), plus `pywatershed`'s derived answer
+   variables written alongside.
+2. Runs `pytest` for that domain with the same arguments CI uses.
+
+It also lints, builds the documentation, and runs the example notebooks.
+Flags turn parts off; `./ci_local.sh -h` lists them. `-g` skips
+populating and tests what is already in `test_data/`.
+
+### Running pieces by hand
+
+Populate only, from the repository root:
+
+```shell
+python test_data/generate/oracle_populate.py                    # every domain
+python test_data/generate/oracle_populate.py --domain hru_1     # one domain
+```
+
+Test one domain and control file, from `autotest/`:
+
+```shell
+pytest -n=auto --domain=hru_1 --control_pattern=nhm.control test_prms_atmosphere.py
+```
+
+Not every test applies to every domain and control file. `pytest` cannot
+tell which do; `ci_local.sh` (and `ci.yaml`) encode that selection with
+`--ignore` lists. Copy the `pytest` block for your domain from
+`ci_local.sh` rather than running the whole suite.
+
+All tests should pass, XPASS, or XFAIL (an expected failure). See
+[`test_data/README.md`](test_data/README.md) and
+[`autotest/README.md`](autotest/README.md) for more.
 
 ## Linting
 

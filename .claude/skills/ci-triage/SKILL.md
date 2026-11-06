@@ -80,9 +80,11 @@ checklist, in order:
    reinstalled to match CI.
 2. `python -m flopy.mf6.utils.generate_classes --ref develop`
    (run from a modflow6 clone's autotest dir, as CI does).
-3. Test data: regenerate if stale (`python generate_test_data.py
-   -n=auto` in `autotest/`; a version guard fails tests when data
-   predates the current version).
+3. Test data: re-populate if stale (`python
+   test_data/generate/oracle_populate.py --domain <d>` from the repo
+   root, after `oracle_fetch.py` with `GITHUB_TOKEN` set when
+   `PWS_ORACLE_DIR` is unset; conftest errors when `.derived_okey` and
+   `.oracle_okey` differ).
 4. Run the job's pytest command with its `--domain` and
    `--control_pattern`. Domainless quirk: the conftest exemption is an
    exact string match on `-m domainless` — pass exactly that markexpr,

@@ -79,6 +79,22 @@ jobs:
         run: |
           python pywatershed/utils/addtl_domain_files.py
 
+      - name: Cache the oracle answer set
+        uses: actions/cache@v4
+        with:
+          path: test_data/.oracle
+          key: oracle-notebooks-${{ runner.os }}-${{ hashFiles('autotest/prms_oracle.toml') }}
+
+      - name: Fetch the oracle answer sets the notebooks read and populate test_data
+        working-directory: autotest
+        env:
+          GITHUB_TOKEN: ${{ secrets.PWS_ORACLE_TOKEN }}
+        run: |
+          python ../test_data/generate/oracle_fetch.py --domain=drb_2yr --domain=ucb_2yr --domain=sagehen_5yr
+          python ../test_data/generate/oracle_populate.py --domain=drb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=ucb_2yr
+          python ../test_data/generate/oracle_populate.py --domain=sagehen_5yr
+
       - name: Run tests
         working-directory: autotest_exs
         run: |

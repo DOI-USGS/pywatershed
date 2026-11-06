@@ -1,11 +1,9 @@
 import pathlib as pl
-import shutil
 
 import numpy as np
 import pyPRMS as pp
 import pytest
 import xarray as xr
-from utils import run_prms
 
 import pywatershed as pws
 
@@ -50,7 +48,7 @@ domain_known_nhm_segs = np.array(
 )
 
 cbh_types = ("ascii", "netcdf")[1:]  # until implemented
-output_types = ["pywatershed", "prms"]
+output_types = ["pywatershed"]
 
 # compound test configs
 subset_styles = ("known", "single_seg")
@@ -262,59 +260,6 @@ def test_pws_subset_known_ids_segs(
             # )
             # if not (mg[f"{var_name}_sub"] == mg[f"{var_name}_full"]).all():
             #     raise ValueError(f"Comparison failed for {var_name=}")
-
-    elif output_format.lower() == "prms":
-        # full domain
-        control = pp.ControlFile(
-            filename=full_control_file,
-            metadata=pws.constants.pyprms_meta,
-            verbose=False,
-        )
-        cv = control.control_variables
-        for ff in [
-            "param_file",
-            "data_file",
-            "tmax_day",
-            "tmin_day",
-            "precip_day",
-        ]:
-            file_path = pl.Path(cv[ff].values)
-            cv[ff].values = file_path.name
-            shutil.copy(file_path, full_run_dir / file_path.name)
-        control.write(full_run_dir / full_control_file.name)
-        control_file = list(full_run_dir.glob("*.control"))[0]
-        run_prms(control_file)
-        full_output_dir = full_run_dir / cv["nhruOutBaseFileName"].values
-
-        # subset domain
-        control_file = list(sub_domain_dir.glob("*.control"))[0]
-        run_prms(control_file)
-        # the path is the same in the subdomain control
-        sub_output_dir = sub_domain_dir / cv["nhruOutBaseFileName"].values
-
-        vars_compare = [
-            "seg_outflow",
-            "sroff",
-            "slow_flow",
-            "gwres_flow",
-            "pkwater_equiv",
-        ]
-
-        for output_dir in [full_output_dir, sub_output_dir]:
-            for vv in vars_compare:
-                csv_path = output_dir / f"{vv}.csv"
-                nc_path = output_dir / f"{vv}.nc"
-                pws.CsvFile(csv_path).to_netcdf(nc_path)
-
-        for vv in vars_compare:
-            file_name = f"{vv}.nc"
-            sub_var = xr.load_dataarray(sub_output_dir / file_name)
-            full_var = xr.load_dataarray(full_output_dir / file_name)
-            if "nhm_id" in sub_var.dims:
-                full_var = full_var.sel(nhm_id=sub_var.nhm_id)
-            elif "nhm_seg" in sub_var.dims:
-                full_var = full_var.sel(nhm_seg=sub_var.nhm_seg)
-            xr.testing.assert_allclose(full_var, sub_var)
 
     else:
         raise ValueError("How'd we get here?")
