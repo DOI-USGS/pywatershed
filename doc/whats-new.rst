@@ -141,6 +141,15 @@ Breaking Changes
 
 Bug fixes
 ~~~~~~~~~
+- :class:`PRMSRunoff` and :class:`PRMSRunoffAg` ran with depression storage
+  off whenever ``dprst_flag`` came from neither the constructor nor the
+  control (e.g. a model built from a yaml or dict without a PRMS control
+  file): the ``None -> True`` default was applied before ``_set_options``,
+  which re-derived the option as ``None``. :class:`PRMSSoilzone` and
+  :class:`PRMSGroundwater` applied their default after ``_set_options`` and
+  stayed on, so the three disagreed within one run. The default is now
+  applied after ``_set_options`` in all four.
+  (:pull:`XXX`) By `James McCreight <https://github.com/jmccreight>`_.
 - :class:`~utils.mmr_to_mf6_dfw.MmrToMf6Dfw` with ``bc_binary_files=True``
   failed in ``flopy.mf6.ModflowChfflw`` with ``Data list
   stress_period_data is an unsupported type: <class 'NoneType'>`` once
