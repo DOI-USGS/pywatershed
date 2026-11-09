@@ -90,10 +90,11 @@ def test_compare_prms(
     print(f"{atol=}")
     print(f"{rtol=}")
 
-    prms_soltab_file = simulation["dir"] / "soltab_debug"
+    # PRMS's raw solar table, shipped with the answers (print_debug 5)
+    prms_soltab_file = simulation["output_dir"] / "soltab_debug"
     if from_prms_file:
         if not prms_soltab_file.exists():
-            pytest.skip("No 'soltab_debug' file found in the simulation dir.")
+            pytest.skip("No 'soltab_debug' file found in the output dir.")
         from_prms_file = prms_soltab_file
     else:
         from_prms_file = None

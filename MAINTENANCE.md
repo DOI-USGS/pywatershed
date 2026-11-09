@@ -14,6 +14,7 @@
     - [Decide the fate of preprocess_gridded_params before 4.0](#decide-the-fate-of-preprocess_gridded_params-before-40)
     - [Metadata for derived cascade and active-HRU parameters](#metadata-for-derived-cascade-and-active-hru-parameters)
     - [PRMSChannel ignores stream_seg_in: cascaded flow never reaches the channel](#prmschannel-ignores-stream_seg_in-cascaded-flow-never-reaches-the-channel)
+    - [Idea: pywatershed writes the gridded CBH forcing itself](#idea-pywatershed-writes-the-gridded-cbh-forcing-itself)
   - [Done](#done)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -322,6 +323,22 @@ check it), **Action** (what to do once unblocked), and optional
   groundwater runs it equals PRMS's `Strm_seg_in`, which is why the
   channel can take runoff's copy directly. Without this, every cascade
   model's streamflow is wrong even though HRU-level outputs match PRMS.
+
+### Idea: pywatershed writes the gridded CBH forcing itself
+
+- **Blocked on:** nothing; not urgent. An idea, not a plan.
+- **Action:** replicate in pywatershed what PRMS does for
+  `sagehen_gridded_5yr` in the oracle's `*_make_cbh_only.control`
+  (`model_mode` WRITE_CLIMATE with `temp_module temp_1sta` and
+  `precip_module precip_1sta`: each cell takes its assigned station's
+  value with the monthly adjustments), writing `prcp/tmax/tmin.nc`
+  directly from the station data file. Verify once against the oracle's
+  PRMS-written CBH and record a hash of the result so later changes are
+  caught; pywatershed's gridded domain would then no longer depend on the
+  oracle for its forcing.
+- **Notes:** today the oracle runs PRMS to write ~600 MB of `.day` files,
+  converts them (`prms_oracle/cbh.py`) and publishes the three netCDFs as
+  the `make_cbh_only` outputs asset; pywatershed only downloads them.
 
 ## Done
 

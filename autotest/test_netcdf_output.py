@@ -105,9 +105,9 @@ def test_process_budgets(
 
     # Could limit this to just the variables in model_procs
     for ff in domain_output_dir.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
     for ff in domain_output_dir.parent.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
 
     # Deal with parameter around what budget sum vars to write and check
     if budget_sum_param == "some":
@@ -273,9 +273,9 @@ def test_separate_together_var_list(
 
     # Could limit this to just the variables in model_procs
     for ff in domain_output_dir.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
     for ff in domain_output_dir.parent.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
 
     model = Model(
         model_procs,

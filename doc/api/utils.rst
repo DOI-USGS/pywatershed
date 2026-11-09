@@ -11,11 +11,7 @@ Utils
     ControlVariables
     MmrToMf6Dfw
     utils.cbh_file_to_netcdf
-    utils.compile_prms
     utils.DomainSubset
-    utils.get_or_compile_prms_exe
-    utils.get_prms_exe_name
-    utils.get_prms_exe_path
     utils.netcdf_utils.subset_netcdf_file
     utils.netcdf_utils.subset_xr
     utils.preprocess_cascades.preprocess_cascade_params

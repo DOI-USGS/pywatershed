@@ -218,9 +218,9 @@ def test_model(simulation, model_args, tmp_path):
     input_dir = tmp_path / "input"
     input_dir.mkdir()
     for ff in output_dir.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
     for ff in output_dir.parent.resolve().glob("*.nc"):
-        shutil.copy(ff, input_dir / ff.name)
+        shutil.copyfile(ff, input_dir / ff.name)
 
     if model_args["control"] is None:
         control = model_args["process_list_or_model_dict"]["control"]

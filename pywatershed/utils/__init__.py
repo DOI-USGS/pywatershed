@@ -20,12 +20,6 @@ from .prms_dyn_param import (
     get_dynamic_param_files_from_control,
     subset_dynamic_param_file,
 )
-from .prms_exe_utils import (
-    compile_prms,
-    get_or_compile_prms_exe,
-    get_prms_exe_name,
-    get_prms_exe_path,
-)
 from .separate_nhm_params import separate_domain_params_dis_to_ncdf
 from .utils import timer
 
@@ -33,10 +27,6 @@ from .optional_import import import_optional_dependency  # isort:skip
 from .mk_starfit_parameters import MakeStarfitParams
 
 __all__ = (
-    "compile_prms",
-    "get_or_compile_prms_exe",
-    "get_prms_exe_name",
-    "get_prms_exe_path",
     "cbh_file_to_netcdf",
     "compare_dynamic_param_files",
     "compare_dynamic_param_files_text",

@@ -71,7 +71,7 @@ while getopts 'hilmtoscrdufgn' opt; do
         ;;
     g)
         g=g
-        echo "Not generating test data for any run tests"
+        echo "Not populating test data from the oracle for any domain"
         ;;
     n)
         n=n
@@ -89,21 +89,21 @@ if [ ! -z "${h}" ]; then
     echo "i: installation"
     echo "l: linting"
     echo "m: modflow update and build"
+    echo "n: example notebooks (autotest_exs, as in ci_examples.yaml)"
     echo "t: tests"
     echo "  o: domainless tests"
     echo "  s: sagehen_5yr"
-    echo "    g: generate sagehen data"
-    echo "  c: sagehen_gridded_5yr (cascades, compiles PRMS 5.2.1)"
-    echo "    g: generate sagehen_gridded data"
+    echo "    g: populate sagehen_5yr from the oracle"
+    echo "  c: sagehen_gridded_5yr (cascades)"
+    echo "    g: populate sagehen_gridded_5yr from the oracle"
     echo "  r: hru_1"
-    echo "    g: generate hru_1 data"
+    echo "    g: populate hru_1 from the oracle"
     echo "  d: drb_2yr"
-    echo "    g: generate drb_2yr data"
+    echo "    g: populate drb_2yr from the oracle"
     echo "  u: ucb_2yr"
-    echo "    g: generate ucb_2yr data"
+    echo "    g: populate ucb_2yr from the oracle"
     echo "  f: fgr_ag_2yr"
-    echo "    g: generate fgr_ag_2yr data"
-    echo "n: example notebooks (autotest_exs, as in ci_examples.yaml)"
+    echo "    g: populate fgr_ag_2yr from the oracle"
 
     exit 0
 fi
@@ -113,31 +113,30 @@ echo ""
 
 start_dir=$(pwd)
 
-# Compile a PRMS version from prms_src/ if its binary isn't in ../bin.
-# The binary name and the build itself live in pywatershed.utils so that
-# this script, ci.yaml, and the test fixtures all agree.
-compile_prms_if_needed() {
-    version="$1"
+# Populate test_data/<domain> from the oracle answer set: links to its
+# inputs and answers, the derived answer variables written alongside.
+# The answer set is PWS_ORACLE_DIR (a pws-prms-oracle clone's domains/)
+# or, unset, the release assets pinned in prms_oracle.toml, which
+# oracle_fetch.py downloads into test_data/.oracle/ first. Arguments
+# after the domain are passed on to populate (--control_pattern=...).
+populate_from_oracle() {
+    domain="$1"
+    shift
 
-    echo ""
-    echo "******************************"
-    echo "PRMS $version binary"
-    echo "******************************"
-    echo "Using make: $(which make)"
-    echo "Using gfortran: $(which gfortran)"
-    gfortran --version | head -1
-
-    python -c "import pywatershed as pws; pws.utils.compile_prms('$version')" \
-        || return 1
-
-    echo ""
-    return 0
+    echo
+    echo ".........."
+    echo "$domain - populate test data from the oracle"
+    echo ".........."
+    echo
+    if [ -z "${PWS_ORACLE_DIR}" ]; then
+        python ../test_data/generate/oracle_fetch.py \
+            --domain="$domain" || return 1
+    fi
+    python ../test_data/generate/oracle_populate.py \
+        --domain="$domain" "$@" || return 1
 }
 
 # name: Set environment variables
-export PYWS_FORTRAN=false
-export SETUPTOOLS_ENABLE_FEATURES="legacy-editable"
-export PYNHM_FORTRAN=false
 # export $(head -n1 ../.mf6_ci_ref_remote)
 # export $(tail -n1 ../.mf6_ci_ref_remote)
 
@@ -303,16 +302,9 @@ if [ -z "${t}" ]; then
         echo "===================="
         echo
 
-        compile_prms_if_needed 5.2.1 || exit 1
         if [ -z "${g}" ]; then
-            echo
-            echo ".........."
-            echo "sagehen_5yr_no_cascades - generate and manage test data domain, "
-            echo "  run PRMS and convert csv output to NetCDF"
-            python generate_test_data.py \
-                -n=$pytest_n --domain=sagehen_5yr \
-                --control_pattern=sagehen_no_cascades.control \
-                --remove_prms_csvs --remove_prms_output_dirs || exit 1
+            populate_from_oracle sagehen_5yr \
+                --control_pattern=sagehen_no_cascades.control || exit 1
         fi
 
         # - name: sagehen_5yr_no_cascades - list netcdf input files
@@ -334,6 +326,7 @@ if [ -z "${t}" ]; then
             --control_pattern=sagehen_no_cascades.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_cbh_to_netcdf.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_control_read.py \
@@ -365,14 +358,8 @@ if [ -z "${t}" ]; then
             --ignore=test_starfit_flow_graph.py || exit 1
 
         if [ -z "${g}" ]; then
-            echo
-            echo ".........."
-            echo "sagehen_5yr_no_gw_cascades - generate and manage test data domain, "
-            echo "  run PRMS and convert csv output to NetCDF"
-            python generate_test_data.py \
-                -n=$pytest_n --domain=sagehen_5yr \
-                --control_pattern=sagehen_no_gw_cascades.control \
-                --remove_prms_csvs --remove_prms_output_dirs || exit 1
+            populate_from_oracle sagehen_5yr \
+                --control_pattern=sagehen_no_gw_cascades.control || exit 1
         fi
 
         echo
@@ -410,22 +397,10 @@ if [ -z "${t}" ]; then
         echo "===================="
         echo
         if [ -z "${g}" ]; then
-            echo
-            echo ".........."
-            echo "sagehen_gridded_5yr - generate CBH forcing files with PRMS"
-            echo "  (compiles PRMS 5.2.1 from prms_src if needed)"
-            python generate_test_data.py \
-                --domain=sagehen_gridded_5yr \
-                --control_pattern=make_cbh_only || exit 1
-
-            echo
-            echo ".........."
-            echo "sagehen_gridded_5yr - generate and manage test data domain, "
-            echo "  run PRMS and convert csv output to NetCDF"
-            python generate_test_data.py \
-                -n=$pytest_n --domain=sagehen_gridded_5yr \
-                --control_pattern=sagehen_gridded_cascades.control \
-                --remove_prms_csvs --remove_prms_output_dirs || exit 1
+            # the oracle holds the CBH forcing files its make_cbh_only
+            # control produced; they are linked with the other inputs
+            populate_from_oracle sagehen_gridded_5yr \
+                --control_pattern=sagehen_gridded_cascades.control || exit 1
         fi
 
         echo
@@ -458,18 +433,8 @@ if [ -z "${t}" ]; then
         echo "===================="
         echo
 
-        compile_prms_if_needed 5.2.1 || exit 1
         if [ -z "${g}" ]; then
-
-            echo
-            echo ".........."
-            echo "hru_1_nhm - generate and manage test data domain, run PRMS "
-            echo "  and convert csv output to NetCDF"
-            echo ".........."
-            echo
-            python generate_test_data.py \
-                -n=$pytest_n --domain=hru_1 \
-                --remove_prms_csvs --remove_prms_output_dirs \
+            populate_from_oracle hru_1 \
                 --control_pattern=nhm.control \
                 --control_pattern=frost.control || exit 1
         fi
@@ -488,6 +453,7 @@ if [ -z "${t}" ]; then
             --control_pattern=nhm.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_domain_subset.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_mmr_to_mf6_dfw.py \
@@ -535,20 +501,8 @@ if [ -z "${t}" ]; then
         echo "===================="
         echo
 
-        # Compile the PRMS binaries this domain needs, if absent
-        compile_prms_if_needed 5.2.1 || exit 1
-        compile_prms_if_needed 5.2.1.1 || exit 1
-
         if [ -z "${g}" ]; then
-            echo
-            echo ".........."
-            echo "drb_2yr all configs - "
-            echo "  generate and manage test data"
-            echo ".........."
-            echo
-            python generate_test_data.py \
-                -n=$pytest_n --domain=drb_2yr \
-                --remove_prms_csvs --remove_prms_output_dirs || exit 1
+            populate_from_oracle drb_2yr || exit 1
         fi
 
         echo ".........."
@@ -657,18 +611,8 @@ if [ -z "${t}" ]; then
         echo "===================="
         echo
 
-        compile_prms_if_needed 5.2.1 || exit 1
         if [ -z "${g}" ]; then
-            echo
-            echo ".........."
-
-            echo "ucb_2yr all configs - generate and manage test data"
-            echo ".........."
-            echo
-            python generate_test_data.py \
-                -n=$pytest_n --domain=ucb_2yr \
-                --remove_prms_csvs \
-                --remove_prms_output_dirs \
+            populate_from_oracle ucb_2yr \
                 --control_pattern=nhm.control \
                 --control_pattern=frost.control || exit 1
         fi
@@ -686,6 +630,7 @@ if [ -z "${t}" ]; then
             --control_pattern=nhm.control \
             --durations=0 \
             --error-for-skips \
+            --ignore=test_data_model.py \
             --ignore=test_netcdf_subset.py \
             --ignore=test_prms_dyn_params.py \
             --ignore=test_obsin_flow_node.py \
@@ -729,47 +674,9 @@ if [ -z "${t}" ]; then
         echo
 
         if [ -z "${g}" ]; then
-            # Check and create symlink to additional domain data
-            echo
-            echo "Check/create symlink to fgr_ag_2yr domain data"
-            expected_target="../pywatershed/data/pywatershed_addtl_domains/fgr_ag_2yr"
-            symlink_path="../test_data/fgr_ag_2yr"
-
-            if [ -L "$symlink_path" ]; then
-                # Symlink exists, check if it points to the right place
-                current_target=$(readlink "$symlink_path")
-                if [ "$current_target" != "$expected_target" ]; then
-                    echo "ERROR: Symlink $symlink_path exists but points to wrong location:"
-                    echo "  Current: $current_target"
-                    echo "  Expected: $expected_target"
-                    exit 1
-                fi
-                echo "Symlink already exists and is correct"
-            elif [ -e "$symlink_path" ]; then
-                # Path exists but is not a symlink
-                echo "ERROR: $symlink_path exists but is not a symlink"
-                exit 1
-            else
-                # Create the symlink
-                ln -sfn "$expected_target" "$symlink_path" || exit 1
-                echo "Symlink created successfully"
-            fi
-
-            echo
-            echo ".........."
-            echo "fgr_ag_2yr all configs - generate and manage test data"
-            echo ".........."
-            echo
-            python generate_test_data.py \
-                -n=$pytest_n --domain=fgr_ag_2yr \
-                --remove_prms_csvs \
-                --remove_prms_output_dirs \
+            populate_from_oracle fgr_ag_2yr \
                 --control_pattern=spinup.control \
                 --control_pattern=analysis.control || exit 1
-
-            echo "fgr_ag_2yr - list netcdf input files"
-            find ../test_data/fgr_ag_2yr/output_spinup -name '*.nc' | sort -n
-            find ../test_data/fgr_ag_2yr/output_analysis -name '*.nc' | sort -n
         fi
 
         echo ".........."
@@ -817,6 +724,13 @@ if [ -z "${n}" ]; then
     echo "EXAMPLE NOTEBOOKS (ci_examples.yaml)"
     echo "******************************"
     echo
+
+    # the domains the notebooks read from test_data/ (00-08: drb_2yr,
+    # 09: ucb_2yr, 11: sagehen_5yr; 09 and 10 also use the additional
+    # domain files below)
+    populate_from_oracle drb_2yr || exit 1
+    populate_from_oracle ucb_2yr || exit 1
+    populate_from_oracle sagehen_5yr || exit 1
 
     cd ..
     echo "Get GIS files for notebooks"

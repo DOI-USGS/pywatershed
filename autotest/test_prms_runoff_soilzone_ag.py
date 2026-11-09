@@ -6,13 +6,21 @@ agricultural soilzone simulations.
 
 Test Domains
 ------------
-Two test domains are used (configured via pytest fixtures):
+The shipped/CI domain is **fgr_ag_2yr** (populated
+into test_data/ from the oracle by test_data/generate/oracle_populate.py),
+with two configurations:
 
-1. **ucb_ag_spinup_2yr** (open-loop): Tests basic dual-area soil moisture
-   accounting without iterative AET matching (iter_aet_flag=False).
+1. **spinup.control** (open-loop): Tests basic dual-area soil moisture
+   accounting without iterative AET matching (iter_aet_flag=False,
+   PRMSSoilzoneAg).
 
-2. **ucb_ag_analysis_2yr** (closed-loop): Tests full iterative AET matching
-   with observed AET data (iter_aet_flag=True).
+2. **analysis.control** (closed-loop): Tests full iterative AET matching
+   with observed AET data (iter_aet_flag=True, PRMSSoilzoneAgObsET).
+
+Historical/offline: **ucb_ag_spinup_2yr** / **ucb_ag_analysis_2yr**, the
+original larger UCB domains these tests were developed on (too large for
+CI; may return). The HRU-time exceptions in ag_exceptions.py remain
+keyed to them.
 
 Tolerance Strategy
 ------------------
@@ -23,7 +31,9 @@ Tolerance Strategy
 - **HRU-time exceptions**: Specific HRU-timestep combinations where Python
   and Fortran diverge due to threshold crossings (e.g., pcts < 0.5 for LOAM
   soil, snow_free < 0.01 for ET type). At these points, Python values are
-  replaced with Fortran values to allow the test to continue.
+  replaced with Fortran values to allow the test to continue. These live in
+  ag_exceptions.py (shared with test_prms_soilzone_ag.py), which validates
+  them at collection time and warns when any apply.
 
 """
 
@@ -32,6 +42,7 @@ import shutil
 import numpy as np
 import pytest
 import xarray as xr
+from ag_exceptions import get_hru_time_exceptions
 from utils_compare import compare_in_memory, compare_netcdfs
 
 from pywatershed.base.adapter import adapter_factory
@@ -88,55 +99,8 @@ var_tolerance_exceptions = {
 }
 
 # Domain-specific HRU-time exceptions for threshold-crossing divergences
-# When accumulated floating-point errors cause Python (double precision) and
-# Fortran (single precision) to cross thresholds differently, affected
-# variables diverge. At these points, Python values are replaced with Fortran
-# values before comparison to allow the test to continue.
-#
-# Format: {simulation_name:
-#     {hru_index: (start_timestep, affected_vars, reason)}
-# }
-domain_hru_time_exceptions = {
-    "ucb_ag_analysis_2yr:nhm_dynamic_2000_2020_w_output_subset_no_restart": {
-        # HRU 1279, timestep 472:
-        #   - ag_soil_moist = 2.000002 (Fortran) vs 1.9999997 (Python)
-        #   - pcts = 0.5000004 (Fortran) vs 0.49999991 (Python)
-        #   - Crosses 0.5 threshold for LOAM soil potet_lower reduction
-        #   - Fortran: pcts >= 0.5, no reduction, ag_potet_lower = 0.05
-        #   - Python: pcts < 0.5, reduction applied, ag_potet_lower = 0.025
-        #   - This is a floating-point precision boundary issue
-        1279: (
-            472,
-            ["ag_potet_lower"],
-            "pcts 0.5 threshold crossing for LOAM soil ag_potet_lower",
-        ),
-    },
-    "ucb_ag_spinup_2yr:nhm_ic_w_output_subset": {
-        # HRU 3642, timestep 40:
-        #   - snow_free = 1.0 - snowcov_area = 0.010000000000000009 in Python
-        #     vs ~0.00999999 in Fortran (single precision)
-        #   - Crosses 0.01 threshold for snow_free ET calculation
-        #   - Python: snow_free >= 0.01, et_type = EVAP_ONLY, ET computed
-        #   - Fortran: snow_free < 0.01, et_type = ET_DEFAULT, et = 0
-        #   - This affects downstream ET calculations and soil moisture
-        #     accounting
-        3642: (
-            40,
-            [
-                "potet_lower",
-                "potet_rechr",
-                "soil_moist",
-                "soil_rechr",
-                "perv_actet",
-                "hru_actet",
-                "unused_potet",
-                "soil_moist_tot",
-                "soil_rechr_change",
-            ],
-            "snow_free 0.01 threshold crossing for ET calculation",
-        ),
-    },
-}
+# live in ag_exceptions.py (single source shared with
+# test_prms_soilzone_ag.py; validated at collection time).
 
 
 def mk_ag_frac_input(domain_dir, full_param_file, input_dir):
@@ -179,7 +143,7 @@ def setup_input_dir(simulation, control, param_obj, process_list):
             out_path = output_dir / f"../{fname}"
 
         # <
-        shutil.copy(out_path, in_path)
+        shutil.copyfile(out_path, in_path)  # not copy: answers are read-only
 
 
 @pytest.fixture(scope="function", params=invoke_styles)
@@ -427,6 +391,8 @@ def test_compare_prms(
     if len(skipped_comp_vars) > 0:
         print(f"Skipped comparison for variables: {skipped_comp_vars}")
 
+    hru_time_exceptions = get_hru_time_exceptions(simulation)
+
     for istep in range(control.n_times):
         # control.advance()
         model.advance()
@@ -468,10 +434,6 @@ def test_compare_prms(
         # for HRUs that have diverged due to threshold crossings
         # This is done after calculate() but before output() so that both
         # in-memory and file-based comparisons see the corrected values
-        simulation_name = simulation["name"]
-        hru_time_exceptions = domain_hru_time_exceptions.get(
-            simulation_name, {}
-        )
         for hru_idx, (
             start_time,
             affected_vars,
