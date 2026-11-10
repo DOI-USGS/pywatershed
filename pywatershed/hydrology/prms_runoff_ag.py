@@ -155,9 +155,10 @@ class PRMSRunoffAg(PRMSRunoff):
         restart_write: Union[pl.Path, bool] = False,
         restart_write_freq: Literal["y", "m", "d", "f", False] = False,
     ) -> None:
+        # _set_options reads option names from the child's signature, and
+        # the NoDprst children have no dprst_flag argument, so store it
+        # here; _set_options overrides it when the child does declare it.
         self._dprst_flag = dprst_flag
-        if self._dprst_flag is None:
-            self._dprst_flag = True
 
         # Call ConservativeProcess.__init__ directly (grandparent)
         ConservativeProcess.__init__(
@@ -175,6 +176,10 @@ class PRMSRunoffAg(PRMSRunoff):
         self._mask_inactive_hrus()
         self._set_inputs(locals())
         self._set_options(locals())
+        # Default after _set_options: it re-derives dprst_flag from the
+        # init argument (None) and the control, else sets None.
+        if self._dprst_flag is None:
+            self._dprst_flag = True
 
         self._set_budget()
         self._init_calc_method()
